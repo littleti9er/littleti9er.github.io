@@ -17,5 +17,49 @@
 <body>
     <h1>🐅 歡迎來到 Little Ti9er 的小天地！</h1>
     <p>我的 GitHub Pages 網站已經成功建立囉！</p>
+<br>
+    <br><br>
+    <div class="card">
+        <p>目前網站累積訪客數：</p>
+        <div id="visitor-box" class="loading">載入中...</div>
+    </div>
+
+    
+
+    <script>
+        // 請將下方引號內的網址換成你剛剛複製的 GAS Web App 部署網址
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwOTV7I2gfqjA2d-86EiC6Kptp5naH42qItMFaQBFHh59u_9_Lg1Fh6s68eHdoj-0Pu/exec?msg=visitors";
+
+        async function fetchVisitorCount() {
+            const box = document.getElementById('visitor-box');
+            try {
+                // 使用 fetch 呼叫 GAS
+                const response = await fetch(GAS_URL);
+                
+                if (!response.ok) {
+                    throw new Error('網路回應錯誤：' + response.status);
+                }
+
+                const data = await response.json();
+                
+                // 成功取得 JSON，把數字顯示在畫面上
+                if (data.status === "success") {
+                    box.className = "counter";
+                    box.innerText = data.visitors;
+                } else {
+                    box.innerText = "資料格式錯誤";
+                }
+            } catch (error) {
+                console.error("發生錯誤：", error);
+                box.className = "loading";
+                box.innerText = "無法載入訪客數（可能被阻擋或網址錯誤）";
+            }
+        }
+
+        // 網頁載入完成後自動執行
+        fetchVisitorCount();
+    </script>
+
+    
 </body>
 </html>
