@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>三角形外心出題機器</title>
+    <!-- Tailwind CSS 樣式 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- KaTeX 數學公式渲染 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen p-6 font-sans">
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-6 space-y-6">
+        <h1 class="text-2xl font-bold text-slate-800 text-center">三角形外心隨機出題機器</h1>
+        
+        <div class="flex justify-center">
+            <button id="generate-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition shadow">
+                生成新題目
+            </button>
+        </div>
+
+        <!-- 題目區 -->
+        <div id="problem-container" class="border border-slate-200 rounded-lg p-5 bg-slate-50 space-y-3 hidden">
+            <h2 class="text-lg font-semibold text-slate-700">【題目】</h2>
+            <div id="problem-text" class="text-xl text-slate-900"></div>
+        </div>
+
+        <!-- 答案區 -->
+        <div id="answer-container" class="border border-emerald-200 rounded-lg p-5 bg-emerald-50/50 space-y-3 hidden">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-emerald-700">【解答與思路】</h2>
+                <button id="toggle-answer" class="text-sm text-emerald-600 hover:underline font-medium">顯示 / 隱藏解答</button>
+            </div>
+            <div id="answer-content" class="text-slate-800 space-y-2 hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // 隨機整數輔助函數
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // 尋找以 (cx, cy) 為圓心、半徑平方為 r2 的圓周上的整數坐標點
+        function getLatticePoints(cx, cy, r2) {
+            let points = [];
+            let r = Math.sqrt(r2);
+            let limit = Math.ceil(r);
+            for (let x = cx - limit; x <= cx + limit; x++) {
+                let dx2 = Math.pow(x - cx, 2);
+                let dy2 = r2 - dx2;
+                if (dy2 >= 0) {
+                    let dy = Math.round(Math.sqrt(dy2));
+                    if (dy * dy === dy2) {
+                        points.push([x, cy + dy]);
+                        if (dy !== 0) {
+                            points.push([x, cy - dy]);
+                        }
+                    }
+                }
+            }
+            // 去除重複點
+            let uniquePoints = [];
+            let set = new Set();
+            for (let p of points) {
+                let key = p[0] + ',' + p[1];
+                if (!set.has(key)) {
+                    set.add(key);
+                    uniquePoints.push(p);
+                }
+            }
+            return uniquePoints;
+        }
+
+        // 檢查三點是否共線（利用三角形面積公式判斷）
+        function isCollinear(p1, p2, p3) {
+            let area = p1[0]*(p2[1]-p3[1]) + p2[0]*(p3[1]-p1[1]) + p3[0]*(p1[1]-p2[1]);
+            return area === 0;
+        }
+
+        function generateProblem() {
+            let points = [];
+            let cx, cy, r2;
+            let attempts = 0;
+            
+            // 嘗試直到找到至少有3個整數點且不共線的組合
+            while (attempts < 100) {
+                cx = randomInt(-3, 3);
+                cy = randomInt(-3, 3);
+                // 常見半徑平方選擇（確保圓周上有足夠的整數點）
+                let r2Options = [25, 34, 41, 50, 65, 73, 85, 100];
+                r2 = r2Options[randomInt(0, r2Options.length - 1)];
+                
+                points = getLatticePoints(cx, cy, r2);
+                if (points.length >= 3) {
+                    let shuffled = [...points].sort(() => Math.random() - 0.5);
+                    let A = shuffled[0];
+                    let B = shuffled[1];
+                    let C = shuffled[2];
+                    if (!isCollinear(A, B, C)) {
+                        window.currentProblem = { cx, cy, r2, A, B, C };
+                        renderProblem();
+                        return;
+                    }
+                }
+                attempts++;
+            }
+            alert("生成失敗，請重試。");
+        }
+
+        function renderProblem() {
+            let p = window.currentProblem;
+            let probDiv = document.getElementById('problem-text');
+            let ansDiv = document.getElementById('answer-content');
+            
+            document.getElementById('problem-container').classList.remove('hidden');
+            document.getElementById('answer-container').classList.remove('hidden');
+
+            // 渲染題目
+            probDiv.innerHTML = `設三角形的三頂點坐標分別為 $A(${p.A[0]}, ${p.A[1]})$、$B(${p.B[0]}, ${p.B[1]})$、$C(${p.C[0]}, ${p.C[1]})$，試求此外接圓的外心坐標。`;
+
+            // 渲染解答
+            ansDiv.innerHTML = `
+                <p><strong>【設計思路】</strong> 根據外心定義，外心到三角形三頂點距離相等（皆等於外接圓半徑 $R$）。由設計時的圓心 $( ${p.cx}, ${p.cy} )$ 可知外心即為此點。</p>
+                <p><strong>【計算過程】</strong></p>
+                <p>設外心坐標為 $O(x, y)$，列出距離平方相等方程式：</p>
+                <p>1. $\\overline{OA}^2 = \\overline{OB}^2 \\implies (x - (${p.A[0]}))^2 + (y - (${p.A[1]}))^2 = (x - (${p.B[0]}))^2 + (y - (${p.B[1]}))^2$</p>
+                <p>2. $\\overline{OB}^2 = \\overline{OC}^2 \\implies (x - (${p.B[0]}))^2 + (y - (${p.B[1]}))^2 = (x - (${p.C[0]}))^2 + (y - (${p.C[1]}))^2$</p>
+                <p>聯立求解可得外心坐標為：<strong>$(${p.cx}, ${p.cy})$</strong></p>
+            `;
+            ansDiv.classList.add('hidden'); // 預設收合解答
+
+            // 觸發 KaTeX 渲染
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        }
+
+        document.getElementById('generate-btn').addEventListener('click', generateProblem);
+        document.getElementById('toggle-answer').addEventListener('click', () => {
+            let ansDiv = document.getElementById('answer-content');
+            ansDiv.classList.toggle('hidden');
+        });
+
+        // 載入時自動生成第一題
+        window.onload = generateProblem;
+    </script>
+</body>
+</html>
