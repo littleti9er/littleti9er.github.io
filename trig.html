@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>單位圓三角函數模擬器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            touch-action: manipulation;
+        }
+        canvas {
+            touch-action: none; /* 防止滑動手機時滾動頁面 */
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 py-4 px-6 shadow-md">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <h1 class="text-2xl font-bold text-sky-400 flex items-center gap-2">
+                <i class="fa-solid fa-circle-notch"></i> 單位圓三角函數模擬器
+            </h1>
+            <p class="text-sm text-slate-400">拖曳圓週上的 P 點或滑鼠在畫布上移動來探索三角函數</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Canvas Container -->
+        <div class="lg:col-span-7 flex flex-col items-center justify-center bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-xl relative min-h-[380px] sm:min-h-[480px]">
+            <!-- Canvas -->
+            <canvas id="simCanvas" class="w-full h-full cursor-pointer rounded-lg"></canvas>
+            
+            <!-- Controls / Quick Angle Buttons -->
+            <div class="mt-4 w-full flex flex-wrap justify-center gap-2 pt-2 border-t border-slate-700/60">
+                <span class="text-xs text-slate-400 self-center mr-1">常用角度：</span>
+                <button onclick="setAngleDeg(0)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">0°</button>
+                <button onclick="setAngleDeg(30)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">30° (π/6)</button>
+                <button onclick="setAngleDeg(45)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">45° (π/4)</button>
+                <button onclick="setAngleDeg(60)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">60° (π/3)</button>
+                <button onclick="setAngleDeg(90)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">90° (π/2)</button>
+                <button onclick="setAngleDeg(120)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">120°</button>
+                <button onclick="setAngleDeg(180)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">180° (π)</button>
+                <button onclick="setAngleDeg(270)" class="px-2.5 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 active:bg-sky-600 transition">270° (3π/2)</button>
+            </div>
+        </div>
+
+        <!-- Info & Formula Panel -->
+        <div class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- Angle & Coordinate Summary Card -->
+            <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold text-slate-200">當前位置與角度</h2>
+                    <span id="quadrantBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        第一象限
+                    </span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/50">
+                        <div class="text-xs text-slate-400 mb-1">角度 θ (deg / rad)</div>
+                        <div class="text-lg font-mono font-bold text-amber-400">
+                            <span id="degVal">0.0</span>° 
+                            <span class="text-xs font-normal text-slate-400">/ <span id="radVal">0.000</span> rad</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/50">
+                        <div class="text-xs text-slate-400 mb-1">點 P 座標 (x, y)</div>
+                        <div class="text-lg font-mono font-bold text-white">
+                            (<span id="coordX">1.000</span>, <span id="coordY">0.000</span>)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slider Control -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>連續調整角度：</span>
+                        <span id="sliderVal">0°</span>
+                    </div>
+                    <input type="range" id="angleSlider" min="0" max="360" step="0.5" value="0"
+                        class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400">
+                </div>
+            </div>
+
+            <!-- Trigonometric Formulas Card -->
+            <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg flex-1 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-sky-400"></i> 三角函數計算式
+                    </h2>
+
+                    <div class="space-y-3.5 font-mono">
+                        
+                        <!-- Cosine Formula -->
+                        <div class="p-3 rounded-xl bg-blue-950/40 border border-blue-500/30 flex flex-col gap-1">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="font-bold text-blue-400 flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span>
+                                    cos θ (餘弦) = 鄰邊 / 斜邊
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-300 pl-4">
+                                = x / r = <span id="cosCalc">1.000 / 1.000</span> = <span id="cosResult" class="font-bold text-blue-300">1.000</span>
+                            </div>
+                        </div>
+
+                        <!-- Sine Formula -->
+                        <div class="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 flex flex-col gap-1">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="font-bold text-rose-400 flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span>
+                                    sin θ (正弦) = 對邊 / 斜邊
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-300 pl-4">
+                                = y / r = <span id="sinCalc">0.000 / 1.000</span> = <span id="sinResult" class="font-bold text-rose-300">0.000</span>
+                            </div>
+                        </div>
+
+                        <!-- Tangent Formula -->
+                        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex flex-col gap-1">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                                    tan θ (正切) = 對邊 / 鄰邊
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-300 pl-4">
+                                = y / x = <span id="tanCalc">0.000 / 1.000</span> = <span id="tanResult" class="font-bold text-emerald-300">0.000</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Footer Instructions -->
+                <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-sky-400"></i>
+                    <span>單位圓的半徑 <strong class="text-slate-200">r = 1</strong>，因此座標 <strong class="text-slate-200">(x, y) = (cos θ, sin θ)</strong>。</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JavaScript logic -->
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // State variables
+        let angleRad = 0; // Current angle in radians (0 to 2PI)
+        let isDragging = false;
+
+        // UI Element references
+        const degValEl = document.getElementById('degVal');
+        const radValEl = document.getElementById('radVal');
+        const coordXEl = document.getElementById('coordX');
+        const coordYEl = document.getElementById('coordY');
+        const quadrantBadgeEl = document.getElementById('quadrantBadge');
+        
+        const cosCalcEl = document.getElementById('cosCalc');
+        const cosResultEl = document.getElementById('cosResult');
+        const sinCalcEl = document.getElementById('sinCalc');
+        const sinResultEl = document.getElementById('sinResult');
+        const tanCalcEl = document.getElementById('tanCalc');
+        const tanResultEl = document.getElementById('tanResult');
+
+        const angleSlider = document.getElementById('angleSlider');
+        const sliderValEl = document.getElementById('sliderVal');
+
+        // Canvas Layout parameters
+        let centerX, centerY, unitRadius;
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            // Set canvas buffer resolution based on device pixel ratio for sharp rendering
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = (rect.height - 40) * dpr; // reserve space for bottom controls
+            
+            ctx.scale(dpr, dpr);
+
+            // Calculate display center and unit circle pixel radius
+            const displayWidth = rect.width;
+            const displayHeight = rect.height - 40;
+            centerX = displayWidth / 2;
+            centerY = displayHeight / 2;
+            unitRadius = Math.min(displayWidth, displayHeight) * 0.38;
+
+            draw();
+        }
+
+        // Convert canvas coordinates to angle
+        function updateAngleFromMouse(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
+
+            // Vector from center to mouse
+            const dx = mouseX - centerX;
+            const dy = mouseY - centerY; // Screen Y is inverted (0 at top)
+
+            // Math.atan2 returns angle in radians (-PI to PI), inverted Y because screen coordinates
+            let angle = Math.atan2(-dy, dx);
+            if (angle < 0) {
+                angle += 2 * Math.PI;
+            }
+
+            angleRad = angle;
+            updateUI();
+            draw();
+        }
+
+        // Set angle manually in degrees
+        function setAngleDeg(deg) {
+            angleRad = (deg * Math.PI) / 180;
+            // Normalize
+            angleRad = (angleRad % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+            updateUI();
+            draw();
+        }
+
+        // Event listeners for Drag & Touch
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            updateAngleFromMouse(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                updateAngleFromMouse(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                isDragging = true;
+                updateAngleFromMouse(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (isDragging && e.touches.length > 0) {
+                updateAngleFromMouse(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // Slider control listener
+        angleSlider.addEventListener('input', (e) => {
+            setAngleDeg(parseFloat(e.target.value));
+        });
+
+        // Update Text / Numerical UI
+        function updateUI() {
+            const cosVal = Math.cos(angleRad);
+            const sinVal = Math.sin(angleRad);
+            const degVal = (angleRad * 180 / Math.PI);
+
+            // 1. Coordinates & Angle
+            degValEl.textContent = degVal.toFixed(1);
+            radValEl.textContent = angleRad.toFixed(3);
+            coordXEl.textContent = cosVal.toFixed(3);
+            coordYEl.textContent = sinVal.toFixed(3);
+
+            // Slider update without triggering event infinity
+            angleSlider.value = degVal.toFixed(1);
+            sliderValEl.textContent = `${degVal.toFixed(1)}°`;
+
+            // 2. Quadrant Badge
+            let quadText = "";
+            const degNorm = (degVal % 360 + 360) % 360;
+            if (degNorm === 0 || degNorm === 360) quadText = "+X 軸上";
+            else if (degNorm === 90) quadText = "+Y 軸上";
+            else if (degNorm === 180) quadText = "-X 軸上";
+            else if (degNorm === 270) quadText = "-Y 軸上";
+            else if (degNorm > 0 && degNorm < 90) quadText = "第一象限 (Ⅰ)";
+            else if (degNorm > 90 && degNorm < 180) quadText = "第二象限 (Ⅱ)";
+            else if (degNorm > 180 && degNorm < 270) quadText = "第三象限 (Ⅲ)";
+            else quadText = "第四象限 (Ⅳ)";
+
+            quadrantBadgeEl.textContent = quadText;
+
+            // 3. Formulas and Calculations
+            // Cosine
+            cosCalcEl.textContent = `${cosVal.toFixed(3)} / 1.000`;
+            cosResultEl.textContent = cosVal.toFixed(3);
+
+            // Sine
+            sinCalcEl.textContent = `${sinVal.toFixed(3)} / 1.000`;
+            sinResultEl.textContent = sinVal.toFixed(3);
+
+            // Tangent (Handling undefined / infinity near 90° & 270°)
+            if (Math.abs(cosVal) < 0.0001) {
+                tanCalcEl.textContent = `${sinVal > 0 ? '1.000' : '-1.000'} / 0.000`;
+                tanResultEl.textContent = "未定義 (∞)";
+                tanResultEl.className = "font-bold text-amber-400";
+            } else {
+                const tanVal = sinVal / cosVal;
+                tanCalcEl.textContent = `${sinVal.toFixed(3)} / ${cosVal.toFixed(3)}`;
+                tanResultEl.textContent = tanVal.toFixed(3);
+                tanResultEl.className = "font-bold text-emerald-300";
+            }
+        }
+
+        // Main Draw Function
+        function draw() {
+            const displayWidth = canvas.width / (window.devicePixelRatio || 1);
+            const displayHeight = canvas.height / (window.devicePixelRatio || 1);
+
+            // Clear screen
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            // Calculate current P point position in canvas pixels
+            const xVal = Math.cos(angleRad);
+            const yVal = Math.sin(angleRad);
+
+            const px = centerX + xVal * unitRadius;
+            const py = centerY - yVal * unitRadius; // Canvas Y goes downwards
+
+            // --- 1. Draw Grid Background (Optional Subtle Grid) ---
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            const gridStep = unitRadius / 4;
+            for (let x = centerX % gridStep; x < displayWidth; x += gridStep) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, displayHeight);
+                ctx.stroke();
+            }
+            for (let y = centerY % gridStep; y < displayHeight; y += gridStep) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(displayWidth, y);
+                ctx.stroke();
+            }
+
+            // --- 2. Draw Main Axes (X & Y) ---
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+
+            // X Axis
+            ctx.beginPath();
+            ctx.moveTo(20, centerY);
+            ctx.lineTo(displayWidth - 20, centerY);
+            ctx.stroke();
+
+            // Y Axis
+            ctx.beginPath();
+            ctx.moveTo(centerX, 20);
+            ctx.lineTo(centerX, displayHeight - 20);
+            ctx.stroke();
+
+            // Axis Arrowheads & Labels
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('X', displayWidth - 15, centerY + 15);
+            ctx.fillText('Y', centerX + 10, 28);
+            ctx.fillText('O', centerX - 15, centerY + 15);
+
+            // Ticks on Axes
+            const tickMarks = [-1, -0.5, 0.5, 1];
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#64748b';
+            ctx.textAlign = 'center';
+
+            tickMarks.forEach(tick => {
+                // X Axis Ticks
+                const tx = centerX + tick * unitRadius;
+                ctx.beginPath();
+                ctx.moveTo(tx, centerY - 4);
+                ctx.lineTo(tx, centerY + 4);
+                ctx.stroke();
+                ctx.fillText(tick.toString(), tx, centerY + 16);
+
+                // Y Axis Ticks
+                const ty = centerY - tick * unitRadius;
+                ctx.beginPath();
+                ctx.moveTo(centerX - 4, ty);
+                ctx.lineTo(centerX + 4, ty);
+                ctx.stroke();
+                ctx.fillText(tick.toString(), centerX - 14, ty + 3);
+            });
+
+            // --- 3. Draw Unit Circle ---
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, unitRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // --- 4. Reference Triangle ---
+            
+            // Fill Triangle Area
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(px, centerY); // Point on X-axis (centerX + xVal * unitRadius, centerY)
+            ctx.lineTo(px, py);      // Point P
+            ctx.closePath();
+            ctx.fill();
+
+            // Right Angle Square Symbol
+            const sqSize = 10 * Math.sign(xVal || 1);
+            const sqSizeY = 10 * Math.sign(yVal || 1);
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(px - sqSize, centerY);
+            ctx.lineTo(px - sqSize, centerY - sqSizeY);
+            ctx.lineTo(px, centerY - sqSizeY);
+            ctx.stroke();
+
+            // Adjacent Side (Cos θ) - Blue Line along X Axis
+            ctx.strokeStyle = '#60a5fa'; // Blue-400
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(px, centerY);
+            ctx.stroke();
+
+            // Opposite Side (Sin θ) - Red/Pink Line Vertical
+            ctx.strokeStyle = '#fb7185'; // Rose-400
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(px, centerY);
+            ctx.lineTo(px, py);
+            ctx.stroke();
+
+            // Hypotenuse (r = 1) - Yellow/Amber Line
+            ctx.strokeStyle = '#f59e0b'; // Amber-500
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(px, py);
+            ctx.stroke();
+
+            // --- 5. Angle Arc (θ) ---
+            const arcRadius = Math.min(unitRadius * 0.25, 40);
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // Canvas angles go clockwise, so negative angleRad represents counter-clockwise in math
+            ctx.arc(centerX, centerY, arcRadius, 0, -angleRad, true);
+            ctx.stroke();
+
+            // Angle Text Label
+            const midAngle = angleRad / 2;
+            const labelDist = arcRadius + 16;
+            const labelX = centerX + Math.cos(midAngle) * labelDist;
+            const labelY = centerY - Math.sin(midAngle) * labelDist;
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('θ', labelX, labelY);
+
+            // --- 6. Point P and Coordinates ---
+            // Point P Outer Ring Effect
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            ctx.arc(px, py, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Point P Center Dot
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(px, py, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Label for Point P
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = xVal >= 0 ? 'left' : 'right';
+            const offsetOffsetX = xVal >= 0 ? 12 : -12;
+            const offsetOffsetY = yVal >= 0 ? -12 : 16;
+
+            ctx.fillText(`P (${xVal.toFixed(3)}, ${yVal.toFixed(3)})`, px + offsetOffsetX, py + offsetOffsetY);
+
+            // Hypotenuse Label r=1
+            const hypMidX = (centerX + px) / 2;
+            const hypMidY = (centerY + py) / 2;
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('r = 1', hypMidX - 10 * Math.sin(angleRad), hypMidY - 10 * Math.cos(angleRad));
+        }
+
+        // Initialize and setup responsive canvas
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            updateUI();
+        });
+    </script>
+</body>
+</html>
