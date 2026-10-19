@@ -5,13 +5,15 @@
     <title>Little Ti9er 的個人網站</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-color: #38bdf8;
-            --accent-hover: #7dd3fc;
-            --title-color: #f43f5e;
+            --bg-color: #f1f5f9;          /* 整體淡色背景 */
+            --card-bg: #ffffff;           /* 卡片純白背景 */
+            --text-main: #1e293b;         /* 主文字深色 */
+            --text-muted: #64748b;        /* 次要文字灰色 */
+            --accent-color: #0284c7;      /* 按鈕文字藍色 */
+            --accent-hover: #0369a1;      /* 按鈕懸停深藍 */
+            --btn-bg: #fefefe;            /* 按鈕預設淡底色 */
+            --btn-hover-bg: #e2e8f0;      /* 按鈕懸停底色 */
+            --title-color: #e11d48;       /* 標題粉紅/紅色 */
         }
 
         body {
@@ -38,8 +40,9 @@
             background: var(--card-bg);
             padding: 30px;
             border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
             text-align: center;
+            border: 1px solid #e2e8f0;
         }
 
         h1 {
@@ -62,8 +65,9 @@
         }
 
         .link-btn {
-            background-color: #334155;
+            background-color: var(--btn-bg);
             color: var(--accent-color);
+            border: 1px solid #cbd5e1;
             padding: 15px 20px;
             border-radius: 10px;
             text-decoration: none;
@@ -73,8 +77,9 @@
         }
 
         .link-btn:hover {
-            background-color: #475569;
+            background-color: var(--btn-hover-bg);
             color: var(--accent-hover);
+            border-color: #94a3b8;
             transform: translateY(-2px);
         }
 
@@ -82,7 +87,7 @@
         .counter {
             font-size: 3rem;
             font-weight: bold;
-            color: #4ade80;
+            color: #16a34a;
             margin: 10px 0 0 0;
         }
 
@@ -103,16 +108,11 @@
 
         <!-- 頁面導航方格區塊 -->
         <div class="card">
-            <h2 style="font-size: 1.2rem; color: #f8fafc; margin-top: 0; margin-bottom: 15px;">📂 快速導航</h2>
+            <h2 style="font-size: 1.2rem; color: var(--text-main); margin-top: 0; margin-bottom: 15px;">📂 快速導航</h2>
             <div class="link-grid">
                 <a href="O.html" class="link-btn">O.html</a>
                 <a href="trig.html" class="link-btn">trig.html</a>
-                <!-- <a href="page-c.html" class="link-btn">c 頁面</a> -->
-            </div>
-            <div class="link-grid">
-                <!--<a href="page-a.html" class="link-btn">a 頁面</a>
-                <a href="page-b.html" class="link-btn">b 頁面</a>
-                 <a href="page-c.html" class="link-btn">c 頁面</a> -->
+                <!-- <a href="page-c.html" class="link-btn">c 頁面</a> --> 
             </div>
         </div>
 
