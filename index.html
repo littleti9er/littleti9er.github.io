@@ -2,38 +2,133 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Little Tiger 的個人網站</title>
+    <title>Little Ti9er 的個人網站</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 100px;
-            background-color: #f4f4f9;
-            color: #333;
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #7dd3fc;
+            --title-color: #f43f5e;
         }
-        h1 { color: #ff6b6b; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--title-color);
+            margin-top: 0;
+            font-size: 1.8rem;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* 網格按鈕排版（每列 3 個，可隨寬度自由調整） */
+        .link-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .link-btn {
+            background-color: #334155;
+            color: var(--accent-color);
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+
+        .link-btn:hover {
+            background-color: #475569;
+            color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        /* 訪客數數字樣式 */
+        .counter {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #4ade80;
+            margin: 10px 0 0 0;
+        }
+
+        .loading {
+            color: var(--text-muted);
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
-    <h1>🐅 歡迎來到 Little Ti9er 的小天地！</h1>
-    <p>我的 GitHub Pages 網站已經成功建立囉！</p>
-<br>
-    <br><br>
-    <div class="card">
-        <p>目前網站累積訪客數：</p>
-        <div id="visitor-box" class="loading">載入中...</div>
+
+    <div class="container">
+        <!-- 標題區塊 -->
+        <div class="card">
+            <h1>🐅 歡迎來到 Little Ti9er 的小天地！</h1>
+            <p>我的 GitHub Pages 網站已經成功建立囉！</p>
+        </div>
+
+        <!-- 頁面導航方格區塊 -->
+        <div class="card">
+            <h2 style="font-size: 1.2rem; color: #f8fafc; margin-top: 0; margin-bottom: 15px;">📂 快速導航</h2>
+            <div class="link-grid">
+                <a href="O.html" class="link-btn">O.html</a>
+                <a href="trig.html" class="link-btn">trig.html</a>
+                <!-- <a href="page-c.html" class="link-btn">c 頁面</a> -->
+            </div>
+            <div class="link-grid">
+                <!--<a href="page-a.html" class="link-btn">a 頁面</a>
+                <a href="page-b.html" class="link-btn">b 頁面</a>
+                 <a href="page-c.html" class="link-btn">c 頁面</a> -->
+            </div>
+        </div>
+
+        <!-- 訪客數統計卡片 -->
+        <div class="card">
+            <p style="margin-bottom: 5px;">目前網站累積訪客數</p>
+            <div id="visitor-box" class="loading">載入中...</div>
+        </div>
     </div>
 
-    
-
     <script>
-        // 請將下方引號內的網址換成你剛剛複製的 GAS Web App 部署網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwOTV7I2gfqjA2d-86EiC6Kptp5naH42qItMFaQBFHh59u_9_Lg1Fh6s68eHdoj-0Pu/exec?msg=visitors";
 
         async function fetchVisitorCount() {
             const box = document.getElementById('visitor-box');
             try {
-                // 使用 fetch 呼叫 GAS
                 const response = await fetch(GAS_URL);
                 
                 if (!response.ok) {
@@ -42,7 +137,6 @@
 
                 const data = await response.json();
                 
-                // 成功取得 JSON，把數字顯示在畫面上
                 if (data.status === "success") {
                     box.className = "counter";
                     box.innerText = data.visitors;
@@ -52,14 +146,12 @@
             } catch (error) {
                 console.error("發生錯誤：", error);
                 box.className = "loading";
-                box.innerText = "無法載入訪客數（可能被阻擋或網址錯誤）";
+                box.innerText = "無法載入訪客數";
             }
         }
 
-        // 網頁載入完成後自動執行
         fetchVisitorCount();
     </script>
-
     
 </body>
 </html>
