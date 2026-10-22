@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trig Blast - 三角函數限時爆破對決</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;600;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        neonCyan: '#00f3ff',
+                        neonPink: '#ff0055',
+                        neonYellow: '#ffea00',
+                        darkBg: '#0b0f19',
+                        cardBg: '#151c2e'
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        noto: ['Noto Sans TC', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Screen Shake Animation */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .animate-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Pulse glow */
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+        }
+        .glow-pink {
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+        }
+
+        /* Custom Keypad Button Styles */
+        .keypad-btn {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.08s ease;
+        }
+        .keypad-btn:active {
+            transform: scale(0.94);
+            background: #334155;
+            border-color: #00f3ff;
+        }
+
+        /* Canvas Particle Overlay */
+        #explosion-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Katex math sizing adaptation */
+        .katex-display {
+            margin: 0.5em 0 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-3 sm:p-6 overflow-x-hidden">
+
+    <!-- Explosion Overlay Canvas -->
+    <canvas id="explosion-canvas"></canvas>
+
+    <!-- Header / Score Board -->
+    <header class="w-full max-w-md flex justify-between items-center bg-cardBg/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-lg mb-3">
+        <div>
+            <div class="text-xs text-slate-400 font-semibold tracking-wider">SCORE</div>
+            <div id="score-display" class="text-2xl font-black orbitron text-neonCyan">0</div>
+        </div>
+        <div class="text-center">
+            <div class="text-xs text-slate-400 font-semibold tracking-wider">STREAK</div>
+            <div id="streak-display" class="text-xl font-bold orbitron text-neonYellow flex items-center justify-center gap-1">
+                <span>⚡</span><span id="streak-count">0</span>
+            </div>
+        </div>
+        <div class="text-right">
+            <div class="text-xs text-slate-400 font-semibold tracking-wider">BEST</div>
+            <div id="best-score-display" class="text-xl font-bold orbitron text-slate-300">0</div>
+        </div>
+    </header>
+
+    <!-- Game Arena Container -->
+    <main id="game-card" class="w-full max-w-md bg-cardBg/90 backdrop-blur-xl border border-slate-700 rounded-3xl p-5 shadow-2xl flex flex-col justify-between flex-grow relative overflow-hidden my-auto">
+        
+        <!-- Timer Bar & Fuse Visual -->
+        <div class="w-full mb-4">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-bold text-neonPink flex items-center gap-1 orbitron">
+                    <i class="fa-solid fa-bomb animate-bounce"></i> FUSE TIMER
+                </span>
+                <span id="timer-text" class="text-sm font-black orbitron text-neonPink">15.0s</span>
+            </div>
+            <div class="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                <div id="timer-bar" class="h-full bg-gradient-to-r from-neonCyan via-neonYellow to-neonPink rounded-full transition-all duration-100 ease-linear w-full"></div>
+            </div>
+        </div>
+
+        <!-- Question Section -->
+        <div class="my-auto py-2 text-center flex flex-col justify-center items-center min-h-[130px]">
+            <div id="quadrant-badge" class="inline-block px-3 py-1 bg-slate-800/80 text-neonCyan text-xs rounded-full border border-neonCyan/30 mb-2 font-medium">
+                已知 $x$ 為第一象限角 ($0 < x < \frac{\pi}{2}$)
+            </div>
+            
+            <div id="question-text" class="text-2xl sm:text-3xl font-bold my-2 min-h-[60px] flex items-center justify-center text-white">
+                <!-- KaTeX Question will render here -->
+            </div>
+            
+            <div class="text-sm text-slate-400 font-medium">
+                求 <span id="target-func" class="text-neonYellow font-bold text-lg">$\cos x$</span> 之值：
+            </div>
+        </div>
+
+        <!-- Math Answer Display Input Box -->
+        <div class="w-full bg-slate-900/90 border-2 border-slate-700 focus-within:border-neonCyan rounded-2xl p-3 mb-4 text-center min-h-[64px] flex items-center justify-center relative shadow-inner">
+            <div id="math-input-display" class="text-2xl sm:text-3xl text-neonCyan font-bold tracking-wider">
+                <!-- Rendered LaTeX Answer Input -->
+            </div>
+            <div id="input-placeholder" class="text-slate-600 text-sm italic absolute">點擊下方按鈕輸入答案...</div>
+        </div>
+
+        <!-- Custom Math Keypad -->
+        <div class="grid grid-cols-4 gap-2 mb-1">
+            <button onclick="inputKey('√')" class="keypad-btn p-3 text-neonCyan font-bold text-xl rounded-xl shadow border-neonCyan/20">√</button>
+            <button onclick="inputKey('/')" class="keypad-btn p-3 text-neonCyan font-bold text-xl rounded-xl shadow border-neonCyan/20">/</button>
+            <button onclick="inputKey('±')" class="keypad-btn p-3 text-neonCyan font-bold text-lg rounded-xl shadow border-neonCyan/20">±</button>
+            <button onclick="inputBackspace()" class="keypad-btn p-3 text-neonPink font-bold text-xl rounded-xl shadow hover:bg-neonPink/20">
+                <i class="fa-solid fa-backspace"></i>
+            </button>
+
+            <button onclick="inputKey('7')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">7</button>
+            <button onclick="inputKey('8')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">8</button>
+            <button onclick="inputKey('9')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">9</button>
+            <button onclick="inputKey('-')" class="keypad-btn p-3 text-neonCyan font-bold text-xl rounded-xl">-</button>
+
+            <button onclick="inputKey('4')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">4</button>
+            <button onclick="inputKey('5')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">5</button>
+            <button onclick="inputKey('6')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">6</button>
+            <button onclick="inputClear()" class="keypad-btn p-3 text-amber-400 font-bold text-sm rounded-xl uppercase">C</button>
+
+            <button onclick="inputKey('1')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">1</button>
+            <button onclick="inputKey('2')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">2</button>
+            <button onclick="inputKey('3')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">3</button>
+            <button onclick="submitAnswer()" class="keypad-btn row-span-2 p-3 bg-gradient-to-b from-neonCyan to-blue-600 text-slate-950 font-black text-xl rounded-xl shadow-lg flex items-center justify-center active:scale-95 transition-transform">
+                <i class="fa-solid fa-paper-plane text-2xl"></i>
+            </button>
+
+            <button onclick="inputKey('0')" class="keypad-btn col-span-2 p-3 text-white font-bold text-xl rounded-xl">0</button>
+            <button onclick="inputKey('.')" class="keypad-btn p-3 text-white font-bold text-xl rounded-xl">.</button>
+        </div>
+    </main>
+
+    <!-- Footer Controls & Mute -->
+    <footer class="w-full max-w-md flex justify-between items-center text-xs text-slate-500 mt-2 px-2">
+        <button id="sound-btn" onclick="toggleSound()" class="flex items-center gap-1.5 hover:text-slate-300 transition-colors">
+            <i class="fa-solid fa-volume-high text-neonCyan" id="sound-icon"></i> <span id="sound-status">音效：開啟</span>
+        </button>
+        <div>高中的三角函數爆破對決 💥</div>
+    </footer>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-cardBg border-2 border-neonPink rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl relative overflow-hidden animate-shake">
+            <div class="text-6xl mb-2 animate-bounce">💥</div>
+            <h2 class="text-3xl font-black orbitron text-neonPink mb-1">BOOM!</h2>
+            <p id="game-over-reason" class="text-slate-300 text-sm mb-4">時間倒數結束，試題爆炸了！</p>
+
+            <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 mb-5 space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">正確答案 (Correct):</span>
+                    <span id="correct-answer-display" class="text-neonCyan font-bold text-lg"></span>
+                </div>
+                <hr class="border-slate-800 my-1">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">本次得分 (Score):</span>
+                    <span id="final-score" class="text-white font-black orbitron text-xl">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">最高連勝 (Best Streak):</span>
+                    <span id="final-streak" class="text-neonYellow font-bold orbitron">0</span>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-3.5 px-6 bg-gradient-to-r from-neonPink to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-2xl shadow-lg transition-all transform active:scale-95 orbitron tracking-wider text-lg">
+                <i class="fa-solid fa-rotate-right mr-2"></i>RETRY / 再試一次
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Game State Variables
+        let score = 0;
+        let streak = 0;
+        let bestScore = 0;
+        let timeLeft = 15;
+        let totalTime = 15;
+        let timerInterval = null;
+        let currentQuestion = null;
+        let userInput = "";
+        let soundEnabled = true;
+
+        // Audio Effects using Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playBeep(freq = 440, type = 'sine', duration = 0.1) {
+            if (!soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function playExplosionSound() {
+            if (!soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const bufferSize = audioCtx.sampleRate * 0.8;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = buffer;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.8);
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+
+                whiteNoise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                whiteNoise.start();
+            } catch(e){}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-status').innerText = soundEnabled ? '音效：開啟' : '音效：靜音';
+            document.getElementById('sound-icon').className = soundEnabled ? 'fa-solid fa-volume-high text-neonCyan' : 'fa-solid fa-volume-xmark text-slate-500';
+        }
+
+        // Mathematical Helper Functions & Angle Generator
+        // Values represented as structured expressions
+        const TRIG_FUNCS = ['sin', 'cos', 'tan'];
+
+        // Preset exact common high school right-triangle / standard angles
+        const VALUE_POOL = [
+            // { label: '1/2', val: 0.5, latex: '\\frac{1}{2}' },
+            { num: 1, den: 2, sqNum: 1, sqDen: 1 },         // 1/2
+            { num: 1, den: 3, sqNum: 1, sqDen: 1 },         // 1/3
+            { num: 2, den: 3, sqNum: 1, sqDen: 1 },         // 2/3
+            { num: 3, den: 4, sqNum: 1, sqDen: 1 },         // 3/4
+            { num: 3, den: 5, sqNum: 1, sqDen: 1 },         // 3/5
+            { num: 4, den: 5, sqNum: 1, sqDen: 1 },         // 4/5
+            { num: 1, den: 2, sqNum: 3, sqDen: 1 },         // sqrt(3)/2
+            { num: 1, den: 2, sqNum: 2, sqDen: 1 },         // sqrt(2)/2
+            { num: 1, den: 1, sqNum: 3, sqDen: 1 },         // sqrt(3)
+            { num: 1, den: 3, sqNum: 3, sqDen: 1 },         // sqrt(3)/3
+            { num: 1, den: 1, sqNum: 2, sqDen: 1 },         // sqrt(2)
+        ];
+
+        // Format raw expression components to standard LaTeX string & normalized simple input strings
+        function generateTrigQuestion() {
+            // Quadrant strategy:
+            // 0: First quadrant (0 < x < pi/2) -> All positive
+            // 1: Second quadrant (pi/2 < x < pi) -> sin > 0, cos/tan < 0
+            // 2: General quadrant or specified range
+            const quadType = Math.floor(Math.random() * 3);
+            
+            let givenFunc = TRIG_FUNCS[Math.floor(Math.random() * TRIG_FUNCS.length)];
+            let targetFunc = TRIG_FUNCS.filter(f => f !== givenFunc)[Math.floor(Math.random() * 2)];
+
+            // Choose triangle sides (a^2 + b^2 = c^2)
+            const pythagoreanTriples = [
+                [3, 4, 5], [5, 12, 13], [1, 1, Math.sqrt(2)], [1, Math.sqrt(3), 2], [1, 2, Math.sqrt(5)], [2, 3, Math.sqrt(13)]
+            ];
+            
+            const triple = pythagoreanTriples[Math.floor(Math.random() * pythagoreanTriples.length)];
+            let opp = triple[0];
+            let adj = triple[1];
+            let hyp = triple[2];
+
+            // Randomize opp/adj order
+            if (Math.random() > 0.5) {
+                let tmp = opp; opp = adj; adj = tmp;
+            }
+
+            // Quadrant & Sign logic
+            let quadText = "";
+            let isFirstQuad = true;
+            let targetSign = 1;
+
+            if (quadType === 0) {
+                quadText = "已知 $x$ 為第一象限角 ($0 < x < \\frac{\\pi}{2}$)";
+                isFirstQuad = true;
+                targetSign = 1;
+            } else if (quadType === 1) {
+                quadText = "已知 $x$ 為第二象限角 ($\\frac{\\pi}{2} < x < \\pi$)";
+                isFirstQuad = false;
+                // In Q2: sin +, cos -, tan -
+                if (targetFunc === 'sin') targetSign = 1;
+                else targetSign = -1;
+            } else {
+                quadText = "已知 $x$ 為銳角 ($0^\\circ < x < 90^\\circ$)";
+                isFirstQuad = true;
+                targetSign = 1;
+            }
+
+            // Calculate values
+            let givenValObj = getFuncVal(givenFunc, opp, adj, hyp);
+            let targetValObj = getFuncVal(targetFunc, opp, adj, hyp);
+
+            // Apply sign
+            if (!isFirstQuad) {
+                if (givenFunc === 'cos' || givenFunc === 'tan') {
+                    givenValObj.sign = -1;
+                }
+            }
+
+            const questionLatex = `${givenFunc} x = ${formatValObjLatex(givenValObj)}`;
+            const answerLatex = formatValObjLatex(targetValObj, targetSign);
+            const acceptableInputs = getAcceptableInputs(targetValObj, targetSign);
+
+            return {
+                quadText: quadText,
+                questionLatex: questionLatex,
+                targetFunc: targetFunc,
+                answerLatex: answerLatex,
+                acceptableInputs: acceptableInputs
+            };
+        }
+
+        function getFuncVal(func, opp, adj, hyp) {
+            if (func === 'sin') return reduceFractionSquare(opp, hyp);
+            if (func === 'cos') return reduceFractionSquare(adj, hyp);
+            if (func === 'tan') return reduceFractionSquare(opp, adj);
+        }
+
+        function reduceFractionSquare(num, den) {
+            // Check if sqrt values
+            let numSq = Math.round(num * num);
+            let denSq = Math.round(den * den);
+
+            // Returns structured representation: sign, numSqrt, numCoeff, denSqrt, denCoeff
+            return {
+                numSq: numSq,
+                denSq: denSq,
+                sign: 1
+            };
+        }
+
+        function formatValObjLatex(valObj, sign = 1) {
+            const finalSign = valObj.sign * sign;
+            const signStr = finalSign < 0 ? "-" : "";
+
+            let n = valObj.numSq;
+            let d = valObj.denSq;
+
+            // Simplify sqrt representation
+            let nStr = simplifySqrtLatex(n);
+            let dStr = simplifySqrtLatex(d);
+
+            if (dStr === "1") {
+                return `${signStr}${nStr}`;
+            }
+            return `${signStr}\\frac{${nStr}}{${dStr}}`;
+        }
+
+        function simplifySqrtLatex(val) {
+            let root = Math.sqrt(val);
+            if (Number.isInteger(root)) return `${root}`;
+
+            // Check simplified square factors
+            let outer = 1;
+            let inner = val;
+            for (let i = Math.floor(Math.sqrt(val)); i > 1; i--) {
+                if (val % (i * i) === 0) {
+                    outer = i;
+                    inner = val / (i * i);
+                    break;
+                }
+            }
+
+            let outerStr = outer > 1 ? `${outer}` : "";
+            return `${outerStr}\\sqrt{${inner}}`;
+        }
+
+        // Flexible user input matching generator
+        function getAcceptableInputs(valObj, sign = 1) {
+            const finalSign = valObj.sign * sign;
+            const signStr = finalSign < 0 ? "-" : "";
+            
+            let nStr = simplifySqrtText(valObj.numSq);
+            let dStr = simplifySqrtText(valObj.denSq);
+
+            let primary = "";
+            if (dStr === "1") {
+                primary = `${signStr}${nStr}`;
+            } else {
+                primary = `${signStr}${nStr}/${dStr}`;
+            }
+
+            let inputs = [primary];
+
+            // Add alternative representations (e.g., non-rationalized vs rationalized denominators or sqrt(1)/2 -> 1/2)
+            if (primary.includes("√1")) {
+                inputs.push(primary.replace(/√1/g, "1"));
+            }
+
+            // Also support ± if sign can be dual (if applicable)
+            if (finalSign > 0 && Math.random() < 0.1) { // fallback
+                inputs.push("+" + primary);
+            }
+
+            return inputs;
+        }
+
+        function simplifySqrtText(val) {
+            let root = Math.sqrt(val);
+            if (Number.isInteger(root)) return `${root}`;
+
+            let outer = 1;
+            let inner = val;
+            for (let i = Math.floor(Math.sqrt(val)); i > 1; i--) {
+                if (val % (i * i) === 0) {
+                    outer = i;
+                    inner = val / (i * i);
+                    break;
+                }
+            }
+            let outerStr = outer > 1 ? `${outer}` : "";
+            return `${outerStr}√${inner}`;
+        }
+
+        // Game Initialization & Flow
+        function startGame() {
+            score = 0;
+            streak = 0;
+            updateScoreBoard();
+            document.getElementById('game-over-modal').classList.add('hidden');
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            userInput = "";
+            updateInputDisplay();
+            
+            currentQuestion = generateTrigQuestion();
+
+            // Render LaTeX Question
+            document.getElementById('quadrant-badge').innerHTML = currentQuestion.quadText;
+            document.getElementById('question-text').innerHTML = `\\(${currentQuestion.questionLatex}\\)`;
+            document.getElementById('target-func').innerHTML = `\\(\\${currentQuestion.targetFunc} x\\)`;
+
+            // Re-render KaTeX elements
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('game-card'), {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false}
+                    ]
+                });
+            }
+
+            // Reset Timer (decreases slightly as streak/score increases for difficulty)
+            totalTime = Math.max(7, 15 - Math.floor(score / 500));
+            timeLeft = totalTime;
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            updateTimerUI();
+
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    updateTimerUI();
+                    clearInterval(timerInterval);
+                    triggerExplosion("時間倒數結束，試題爆破！");
+                } else {
+                    updateTimerUI();
+                    if (timeLeft <= 3.0 && Math.floor(timeLeft * 10) % 2 === 0) {
+                        playBeep(880, 'square', 0.05); // Urgent countdown tick
+                    }
+                }
+            }, 100);
+        }
+
+        function updateTimerUI() {
+            const timerBar = document.getElementById('timer-bar');
+            const timerText = document.getElementById('timer-text');
+            const percentage = Math.max(0, (timeLeft / totalTime) * 100);
+            
+            timerBar.style.width = `${percentage}%`;
+            timerText.innerText = `${timeLeft.toFixed(1)}s`;
+
+            if (percentage < 30) {
+                timerBar.className = "h-full bg-neonPink rounded-full transition-all duration-100 ease-linear w-full animate-pulse";
+            } else {
+                timerBar.className = "h-full bg-gradient-to-r from-neonCyan via-neonYellow to-neonPink rounded-full transition-all duration-100 ease-linear w-full";
+            }
+        }
+
+        // Keypad Interactions
+        function inputKey(char) {
+            playBeep(520, 'sine', 0.05);
+            if (userInput.length < 12) {
+                userInput += char;
+                updateInputDisplay();
+            }
+        }
+
+        function inputBackspace() {
+            playBeep(350, 'sine', 0.05);
+            userInput = userInput.slice(0, -1);
+            updateInputDisplay();
+        }
+
+        function inputClear() {
+            playBeep(280, 'sine', 0.05);
+            userInput = "";
+            updateInputDisplay();
+        }
+
+        function updateInputDisplay() {
+            const display = document.getElementById('math-input-display');
+            const placeholder = document.getElementById('input-placeholder');
+
+            if (!userInput) {
+                display.innerHTML = "";
+                placeholder.classList.remove('hidden');
+                return;
+            }
+
+            placeholder.classList.add('hidden');
+            
+            // Format input string into readable LaTeX
+            let latexFormatted = userInput
+                .replace(/±/g, '\\pm ')
+                .replace(/√(\d+)/g, '\\sqrt{$1}')
+                .replace(/√/g, '\\sqrt{}');
+
+            if (latexFormatted.includes('/')) {
+                const parts = latexFormatted.split('/');
+                latexFormatted = `\\frac{${parts[0]}}{${parts[1] || ''}}`;
+            }
+
+            display.innerHTML = `\\(${latexFormatted}\\)`;
+
+            if (window.katex) {
+                try {
+                    katex.render(latexFormatted, display, { throwOnError: false });
+                } catch(e) {
+                    display.innerText = userInput;
+                }
+            }
+        }
+
+        // Answer Validation
+        function submitAnswer() {
+            if (!userInput) return;
+
+            clearInterval(timerInterval);
+
+            // Format check
+            const normalizedInput = userInput.trim().replace(/\s+/g, '');
+            const isCorrect = currentQuestion.acceptableInputs.some(ans => {
+                return ans === normalizedInput || ans === userInput;
+            });
+
+            if (isCorrect) {
+                // Correct Answer
+                playBeep(880, 'triangle', 0.15);
+                setTimeout(() => playBeep(1200, 'triangle', 0.2), 100);
+
+                streak++;
+                score += 100 + (streak * 20) + Math.floor(timeLeft * 10);
+                if (score > bestScore) bestScore = score;
+                updateScoreBoard();
+
+                // Quick visual effect
+                const card = document.getElementById('game-card');
+                card.classList.add('glow-cyan');
+                setTimeout(() => card.classList.remove('glow-cyan'), 400);
+
+                nextQuestion();
+            } else {
+                // Wrong Answer
+                triggerExplosion(`答案錯誤！你的回答：${userInput}`);
+            }
+        }
+
+        function triggerExplosion(reason) {
+            playExplosionSound();
+
+            // Screen shake effect
+            const card = document.getElementById('game-card');
+            card.classList.add('animate-shake', 'glow-pink');
+            
+            // Trigger particle explosion
+            createExplosionParticles();
+
+            setTimeout(() => {
+                card.classList.remove('animate-shake', 'glow-pink');
+                showGameOver(reason);
+            }, 600);
+        }
+
+        function showGameOver(reason) {
+            document.getElementById('game-over-reason').innerText = reason;
+            document.getElementById('correct-answer-display').innerHTML = `\\(${currentQuestion.answerLatex}\\)`;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-streak').innerText = streak;
+            document.getElementById('game-over-modal').classList.remove('hidden');
+
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('correct-answer-display'));
+            }
+        }
+
+        function updateScoreBoard() {
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('streak-count').innerText = streak;
+            document.getElementById('best-score-display').innerText = bestScore;
+        }
+
+        // Canvas Particle Explosion
+        const canvas = document.getElementById('explosion-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createExplosionParticles() {
+            particles = [];
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const colors = ['#ff0055', '#ffea00', '#00f3ff', '#ffffff', '#ff5500'];
+
+            for (let i = 0; i < 120; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 12 + 2;
+                particles.push({
+                    x: centerX,
+                    y: centerY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 6 + 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.015
+                });
+            }
+            requestAnimationFrame(updateParticles);
+        }
+
+        function updateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let alive = false;
+
+            particles.forEach(p => {
+                if (p.alpha > 0) {
+                    alive = true;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.15; // Gravity
+                    p.alpha -= p.decay;
+
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = p.color;
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+
+            if (alive) {
+                requestAnimationFrame(updateParticles);
+            }
+        }
+
+        // Physical Keyboard Support
+        window.addEventListener('keydown', (e) => {
+            if (document.getElementById('game-over-modal').classList.contains('hidden')) {
+                if (e.key >= '0' && e.key <= '9') inputKey(e.key);
+                else if (e.key === '/') inputKey('/');
+                else if (e.key === '-') inputKey('-');
+                else if (e.key === 'r' || e.key === 'R') inputKey('√');
+                else if (e.key === 'Backspace') inputBackspace();
+                else if (e.key === 'Escape') inputClear();
+                else if (e.key === 'Enter') submitAnswer();
+            } else {
+                if (e.key === 'Enter' || e.key === ' ') startGame();
+            }
+        });
+
+        // Initialize on load
+        window.onload = function() {
+            startGame();
+        };
+    </script>
+</body>
+</html>
