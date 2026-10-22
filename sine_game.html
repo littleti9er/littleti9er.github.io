@@ -516,8 +516,9 @@
                 });
             }
 
-            totalTime = Math.max(7, 20 - Math.floor(score / 500));
-            timeLeft = totalTime;
+            // 固定每題 20 秒
+            totalTime = 20;
+            timeLeft = 20;
             startTimer();
         }
 
