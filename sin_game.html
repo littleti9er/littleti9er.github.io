@@ -157,6 +157,33 @@
             </div>
         </div>
 
+        <!-- Scratchpad Toggle & Drawer -->
+        <div class="w-full mb-3">
+            <button type="button" onclick="toggleScratchpad()" class="w-full py-2 px-4 bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-between transition-colors shadow">
+                <span class="flex items-center gap-2 text-neonCyan">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>點擊此展開顯示計算紙</span>
+                </span>
+                <i id="scratchpad-icon" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+            </button>
+            <div id="scratchpad-container" class="hidden mt-2 p-2 bg-slate-900/95 rounded-2xl border border-slate-700/80 shadow-inner">
+                <div class="relative w-full h-40 bg-slate-950 rounded-xl overflow-hidden touch-none border border-slate-800">
+                    <canvas id="scratchpad-canvas" class="w-full h-full cursor-crosshair"></canvas>
+                </div>
+                <div class="flex justify-between items-center mt-2 px-1">
+                    <span class="text-[10px] text-slate-500">可在畫面上塗鴉計算</span>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="undoScratchpad()" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors">
+                            <i class="fa-solid fa-rotate-left mr-1"></i>復原
+                        </button>
+                        <button type="button" onclick="clearScratchpad()" class="px-2.5 py-1 text-xs bg-neonPink/20 hover:bg-neonPink/30 text-neonPink rounded-lg border border-neonPink/30 transition-colors">
+                            <i class="fa-solid fa-trash-can mr-1"></i>清空
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Math Answer Display Input Box -->
         <div class="w-full bg-slate-900/90 border-2 border-slate-700 focus-within:border-neonCyan rounded-2xl p-3 mb-4 text-center min-h-[64px] flex items-center justify-center relative shadow-inner">
             <div id="math-input-display" class="text-2xl sm:text-3xl text-neonCyan font-bold tracking-wider">
@@ -304,7 +331,7 @@
 
         // Mathematical Helper Functions & Angle Generator
         // Values represented as structured expressions
-        const TRIG_FUNCS = ['sin', 'cos', 'tan'];
+        const TRIG_FUNCS = ['\\sin', '\\cos', '\\tan'];
 
         // Preset exact common high school right-triangle / standard angles
         const VALUE_POOL = [
@@ -361,7 +388,7 @@
                 quadText = "已知 $x$ 為第二象限角 ($\\frac{\\pi}{2} < x < \\pi$)";
                 isFirstQuad = false;
                 // In Q2: sin +, cos -, tan -
-                if (targetFunc === 'sin') targetSign = 1;
+                if (targetFunc === '\\sin') targetSign = 1;
                 else targetSign = -1;
             } else {
                 quadText = "已知 $x$ 為銳角 ($0^\\circ < x < 90^\\circ$)";
@@ -375,7 +402,7 @@
 
             // Apply sign
             if (!isFirstQuad) {
-                if (givenFunc === 'cos' || givenFunc === 'tan') {
+                if (givenFunc === '\\cos' || givenFunc === '\\tan') {
                     givenValObj.sign = -1;
                 }
             }
@@ -394,9 +421,9 @@
         }
 
         function getFuncVal(func, opp, adj, hyp) {
-            if (func === 'sin') return reduceFractionSquare(opp, hyp);
-            if (func === 'cos') return reduceFractionSquare(adj, hyp);
-            if (func === 'tan') return reduceFractionSquare(opp, adj);
+            if (func === '\\sin') return reduceFractionSquare(opp, hyp);
+            if (func === '\\cos') return reduceFractionSquare(adj, hyp);
+            if (func === '\\tan') return reduceFractionSquare(opp, adj);
         }
 
         function reduceFractionSquare(num, den) {
@@ -512,8 +539,8 @@
 
             // Render LaTeX Question
             document.getElementById('quadrant-badge').innerHTML = currentQuestion.quadText;
-            document.getElementById('question-text').innerHTML = `\\(\\${currentQuestion.questionLatex}\\)`;
-            document.getElementById('target-func').innerHTML = `\\(\\${currentQuestion.targetFunc} x\\)`;
+            document.getElementById('question-text').innerHTML = `\\(${currentQuestion.questionLatex}\\)`;
+            document.getElementById('target-func').innerHTML = `\\(${currentQuestion.targetFunc} x\\)`;
 
             // Re-render KaTeX elements
             if (window.renderMathInElement) {
@@ -530,6 +557,120 @@
             totalTime = Math.max(7, 15 - Math.floor(score / 500));
             timeLeft = totalTime;
             startTimer();
+        }
+
+        // Scratchpad Logic
+        let scratchCanvas, scratchCtx;
+        let isDrawing = false;
+        let strokeHistory = [];
+        let currentStroke = [];
+
+        function initScratchpad() {
+            scratchCanvas = document.getElementById('scratchpad-canvas');
+            if (!scratchCanvas) return;
+            scratchCtx = scratchCanvas.getContext('2d');
+
+            const resizeScratch = () => {
+                const rect = scratchCanvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                scratchCanvas.width = rect.width * dpr;
+                scratchCanvas.height = rect.height * dpr;
+                scratchCtx.scale(dpr, dpr);
+                redrawScratchpad();
+            };
+
+            window.addEventListener('resize', resizeScratch);
+            resizeScratch();
+
+            // Touch & Mouse Event Listeners
+            const getPos = (e) => {
+                const rect = scratchCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            };
+
+            const startDraw = (e) => {
+                isDrawing = true;
+                const pos = getPos(e);
+                currentStroke = [pos];
+                scratchCtx.beginPath();
+                scratchCtx.strokeStyle = '#00f3ff';
+                scratchCtx.lineWidth = 2.5;
+                scratchCtx.lineCap = 'round';
+                scratchCtx.lineJoin = 'round';
+                scratchCtx.moveTo(pos.x, pos.y);
+            };
+
+            const draw = (e) => {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                currentStroke.push(pos);
+                scratchCtx.lineTo(pos.x, pos.y);
+                scratchCtx.stroke();
+            };
+
+            const stopDraw = () => {
+                if (!isDrawing) return;
+                isDrawing = false;
+                if (currentStroke.length > 0) {
+                    strokeHistory.push([...currentStroke]);
+                }
+                currentStroke = [];
+            };
+
+            scratchCanvas.addEventListener('mousedown', startDraw);
+            scratchCanvas.addEventListener('mousemove', draw);
+            scratchCanvas.addEventListener('mouseup', stopDraw);
+            scratchCanvas.addEventListener('mouseleave', stopDraw);
+
+            scratchCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); });
+            scratchCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+            scratchCanvas.addEventListener('touchend', stopDraw);
+        }
+
+        function toggleScratchpad() {
+            const container = document.getElementById('scratchpad-container');
+            const icon = document.getElementById('scratchpad-icon');
+            container.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+
+            if (!container.classList.contains('hidden') && !scratchCanvas) {
+                setTimeout(initScratchpad, 50);
+            }
+        }
+
+        function clearScratchpad() {
+            strokeHistory = [];
+            redrawScratchpad();
+        }
+
+        function undoScratchpad() {
+            strokeHistory.pop();
+            redrawScratchpad();
+        }
+
+        function redrawScratchpad() {
+            if (!scratchCtx || !scratchCanvas) return;
+            const rect = scratchCanvas.getBoundingClientRect();
+            scratchCtx.clearRect(0, 0, rect.width, rect.height);
+
+            strokeHistory.forEach(stroke => {
+                if (stroke.length === 0) return;
+                scratchCtx.beginPath();
+                scratchCtx.strokeStyle = '#00f3ff';
+                scratchCtx.lineWidth = 2.5;
+                scratchCtx.lineCap = 'round';
+                scratchCtx.lineJoin = 'round';
+                scratchCtx.moveTo(stroke[0].x, stroke[0].y);
+                for (let i = 1; i < stroke.length; i++) {
+                    scratchCtx.lineTo(stroke[i].x, stroke[i].y);
+                }
+                scratchCtx.stroke();
+            });
         }
 
         function startTimer() {
