@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>烏龜車成雙定理：狀況一 (3D版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+    
+    * {
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* 浮貼按鈕樣式 */
+    .btn-touch {
+      transition: all 0.08s ease;
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    .btn-touch:active, .btn-touch.active {
+      transform: scale(0.90);
+      background: rgba(59, 130, 246, 0.9);
+      border-color: #60a5fa;
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.7);
+    }
+
+    /* 喇叭鍵浮貼樣式 */
+    .btn-horn {
+      background: rgba(220, 38, 38, 0.8);
+      border: 1.5px solid rgba(248, 113, 113, 0.5);
+    }
+    .btn-horn:active, .btn-horn.active {
+      transform: scale(0.92);
+      background: rgba(239, 68, 68, 0.98);
+      box-shadow: 0 0 22px rgba(239, 68, 68, 0.85);
+    }
+
+    /* 3D 對話氣泡樣式 */
+    .speech-bubble {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #f8fafc;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: opacity 0.2s;
+    }
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px 6px 0;
+      border-style: solid;
+      border-color: rgba(15, 23, 42, 0.9) transparent;
+      display: block;
+      width: 0;
+    }
+  </style>
+</head>
+<body class="relative w-full h-full overflow-hidden bg-slate-950">
+
+  <!-- 3D Canvas 容器 -->
+  <div id="canvas-container"></div>
+
+  <!-- 頭頂對話框 繪製層 -->
+  <div id="bubble-container" class="absolute inset-0 pointer-events-none z-10">
+    <div id="bubbleA" class="speech-bubble">天氣真好～</div>
+    <div id="bubbleB" class="speech-bubble">不急不急～</div>
+  </div>
+
+  <!-- 頂部面板：HUD 時速與怒氣值 -->
+  <div class="absolute top-3 left-3 right-3 pointer-events-none z-20 flex flex-col gap-2 max-w-md mx-auto lg:mx-0 lg:w-80">
+    <!-- 時速板面 -->
+    <div class="glass-panel rounded-2xl p-2.5 px-4 shadow-xl flex items-center justify-between">
+      <div>
+        <div class="text-[10px] text-slate-300 font-bold tracking-wider">我方時速 (SPEED)</div>
+        <div class="text-2xl font-black text-amber-400 flex items-baseline gap-1">
+          <span id="speedDisplay">40.0</span>
+          <span class="text-xs text-slate-300 font-normal">km/h</span>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="text-[10px] text-slate-300 font-bold tracking-wider">烏龜車速 (LIMIT)</div>
+        <div class="text-base font-bold text-sky-400">
+          ~42.0 <span class="text-xs text-slate-300">km/h</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 怒氣值 Meter -->
+    <div class="glass-panel rounded-2xl p-2.5 px-4 shadow-xl">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-xs font-bold text-slate-200 flex items-center gap-1">
+          🔥 怒氣累積值 (近距離貼車觸發)
+        </span>
+        <span id="rageText" class="text-xs font-black text-rose-400">0%</span>
+      </div>
+      <div class="w-full bg-slate-950/80 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-700">
+        <div id="rageBar" class="bg-gradient-to-r from-amber-500 via-rose-500 to-red-600 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部按鍵控制區：浮貼於畫面最下方 -->
+  <div class="absolute bottom-4 left-0 right-0 z-20 flex justify-between items-end px-6 max-w-md mx-auto pointer-events-auto md:hidden">
+    <!-- 左側：直立長條型按喇叭鍵 -->
+    <button id="btnHorn" class="btn-touch btn-horn w-16 h-36 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-2xl">
+      <span class="text-2xl">📣</span>
+      <span class="text-xs font-black tracking-widest" style="writing-mode: vertical-lr;">喇叭鍵</span>
+    </button>
+
+    <!-- 右側：十字方向鍵 -->
+    <div class="flex flex-col items-center gap-1.5">
+      <button id="btnUp" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
+        ▲
+      </button>
+      <div class="flex gap-1.5">
+        <button id="btnLeft" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
+          ◀
+        </button>
+        <button id="btnDown" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
+          ▼
+        </button>
+        <button id="btnRight" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
+          ▶
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 證明完畢 Card Modal -->
+  <div id="proofModal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
+    <div class="glass-panel bg-slate-900/90 border border-rose-500/30 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-4">
+      <div class="inline-block p-3 bg-rose-500/10 rounded-full border border-rose-500/20 text-3xl">
+        🐢🐢
+      </div>
+      <h2 class="text-2xl font-black text-rose-400 tracking-wide">
+        《烏龜車成雙定理》
+      </h2>
+      <div class="text-lg font-bold text-slate-200 bg-slate-800/80 py-2 rounded-xl border border-slate-700">
+        狀況一：證明完畢！
+      </div>
+      <p class="text-sm text-slate-300 leading-relaxed text-left bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+        不管你怎麼踩油門切換車道，兩台烏龜車始終維持 <span class="text-amber-400 font-bold">&lt; 1倍車身</span> 的極小縱向差距併排龜速行駛，形成完美的「移動路障鐵幕」。
+      </p>
+      <button onclick="resetGame()" class="w-full py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+        🔄 再次驗證定理
+      </button>
+    </div>
+  </div>
+
+  <!-- 事故 Modal (進警局) -->
+  <div id="accidentModal" class="hidden absolute inset-0 bg-red-950/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
+    <div class="glass-panel bg-slate-900/90 border border-red-500/50 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-4">
+      <div class="inline-block p-4 bg-red-500/20 rounded-full text-4xl animate-pulse">
+        🚓
+      </div>
+      <h2 class="text-2xl font-black text-red-500 tracking-wide">
+        發生交通事故！
+      </h2>
+      <div class="text-xl font-bold text-white bg-red-900/50 py-3 rounded-xl border border-red-700/50">
+        你已被送進警察局 👮‍♂️
+      </div>
+      <p class="text-sm text-slate-300 leading-relaxed">
+        由於未保持安全車距追撞前車，警察杯杯已將你帶回派出所做筆錄。請保持理智，勿近距離逼車！
+      </p>
+      <button onclick="resetGame()" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+        📝 簽交保單 (重新開始)
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // --- 音效系統 (Web Audio API) ---
+    class SoundSystem {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+      playHorn() {
+        this.init();
+        if (!this.ctx) return;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'sawtooth';
+        osc2.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(415, this.ctx.currentTime);
+        osc2.frequency.setValueAtTime(520, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc1.start();
+        osc2.start();
+        osc1.stop(this.ctx.currentTime + 0.35);
+        osc2.stop(this.ctx.currentTime + 0.35);
+      }
+      playCrash() {
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.5);
+
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.5);
+      }
+    }
+
+    const sound = new SoundSystem();
+
+    // --- 3D 場景與渲染初始化 ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f172a);
+    scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // 光源設置
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(20, 40, 20);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // 雙車道常數與建構
+    const ROAD_WIDTH = 8.0;
+    const LANE_LEFT = -2.0;
+    const LANE_RIGHT = 2.0;
+    const CAR_LENGTH = 3.8;
+    const CAR_WIDTH = 1.8;
+
+    // 路面 Mesh
+    const roadGeometry = new THREE.PlaneGeometry(ROAD_WIDTH, 1000);
+    const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+    const road = new THREE.Mesh(roadGeometry, roadMaterial);
+    road.rotation.x = -Math.PI / 2;
+    road.position.z = -400;
+    scene.add(road);
+
+    // 中央黃色虛線
+    const lineMarkings = [];
+    const lineGeo = new THREE.PlaneGeometry(0.2, 3);
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    for (let i = 0; i < 50; i++) {
+      const line = new THREE.Mesh(lineGeo, lineMat);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(0, 0.01, -i * 12);
+      scene.add(line);
+      lineMarkings.push(line);
+    }
+
+    // 兩側護欄
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5 });
+    const railLeft = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1, 1000), railMat);
+    railLeft.position.set(-ROAD_WIDTH/2 - 0.2, 0.5, -400);
+    scene.add(railLeft);
+
+    const railRight = railLeft.clone();
+    railRight.position.x = ROAD_WIDTH/2 + 0.2;
+    scene.add(railRight);
+
+    // 車輛建模函式
+    function createCarMesh(colorHex) {
+      const carGroup = new THREE.Group();
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
+      const body = new THREE.Mesh(new THREE.BoxGeometry(CAR_WIDTH, 0.8, CAR_LENGTH), bodyMat);
+      body.position.y = 0.5;
+      body.castShadow = true;
+      carGroup.add(body);
+
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), bodyMat);
+      top.position.set(0, 1.1, -0.2);
+      carGroup.add(top);
+
+      const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+      const leftTail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.1), tailLightMat);
+      leftTail.position.set(-0.7, 0.6, CAR_LENGTH/2 + 0.01);
+      const rightTail = leftTail.clone();
+      rightTail.position.x = 0.7;
+      carGroup.add(leftTail);
+      carGroup.add(rightTail);
+
+      return carGroup;
+    }
+
+    // 建立 3D 車輛 Mesh
+    const playerMesh = createCarMesh(0xef4444); // 我方紅車
+    scene.add(playerMesh);
+
+    const turtleMeshA = createCarMesh(0x06b6d4); // 烏龜車 A (青藍)
+    scene.add(turtleMeshA);
+
+    const turtleMeshB = createCarMesh(0x10b981); // 烏龜車 B (綠色)
+    scene.add(turtleMeshB);
+
+    // --- 全域遊戲狀態 ---
+    let rage = 0;
+    let isGameOver = false;
+    let roadOffset = 0;
+
+    // 我方紅車狀態
+    const player = {
+      x: LANE_RIGHT,
+      y: 0,
+      speed: 40.0,
+      maxSpeed: 100.0,
+      minSpeed: 20.0,
+      accel: 12.0,
+      decel: 18.0,
+      friction: 5.0,
+      turnSpeed: 12.0,
+      zDistFromTurtle: 18.0 // 相對於烏龜車群的初始距離
+    };
+
+    // 烏龜車 A & B
+    const turtleA = { x: LANE_RIGHT, relativeY: -18, speed: 41.5, talk: "天氣真好～" };
+    const turtleB = { x: LANE_LEFT, relativeY: -18.5, speed: 42.0, talk: "不急不急～" };
+
+    const turtleQuotesA = ["天氣真好～", "慢慢開最安全", "急什麼呢？", "享受風景呀", "安全第一！"];
+    const turtleQuotesB = ["旁邊有車耶", "後方車靠好近", "速限40剛剛好", "穩穩開就好", "不急不急～"];
+
+    let quoteTimer = 0;
+
+    // 按鍵狀態
+    const keys = { up: false, down: false, left: false, right: false };
+
+    // 事件與控制器綁定
+    window.addEventListener('keydown', (e) => {
+      sound.init();
+      if (isGameOver) return;
+
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = true;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = true;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+
+      if (e.key === 'Enter') triggerHorn();
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = false;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = false;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+    });
+
+    function bindTouchBtn(id, keyName) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      
+      const start = (e) => {
+        e.preventDefault();
+        sound.init();
+        keys[keyName] = true;
+        btn.classList.add('active');
+      };
+      const end = (e) => {
+        e.preventDefault();
+        keys[keyName] = false;
+        btn.classList.remove('active');
+      };
+
+      btn.addEventListener('touchstart', start);
+      btn.addEventListener('touchend', end);
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', end);
+      btn.addEventListener('mouseleave', end);
+    }
+
+    bindTouchBtn('btnUp', 'up');
+    bindTouchBtn('btnDown', 'down');
+    bindTouchBtn('btnLeft', 'left');
+    bindTouchBtn('btnRight', 'right');
+
+    const btnHorn = document.getElementById('btnHorn');
+    if (btnHorn) {
+      btnHorn.addEventListener('click', (e) => {
+        e.preventDefault();
+        triggerHorn();
+      });
+    }
+
+    function triggerHorn() {
+      if (isGameOver) return;
+      sound.playHorn();
+      rage = Math.min(100, rage + 8);
+      updateRageDisplay();
+    }
+
+    // --- 修正碰撞與車禍觸發機件的邏輯 ---
+    function updateGameLogic(dt) {
+      if (isGameOver) return;
+
+      // 1. 我方車速控制 (W/S 或 上下鍵改變 player.speed)
+      if (keys.up) {
+        player.speed += player.accel * dt * 5;
+      } else if (keys.down) {
+        player.speed -= player.decel * dt * 5;
+      } else {
+        if (player.speed > 40.0) {
+          player.speed -= player.friction * dt * 2;
+        } else if (player.speed < 40.0) {
+          player.speed += player.friction * dt * 2;
+        }
+      }
+      player.speed = Math.max(player.minSpeed, Math.min(player.maxSpeed, player.speed));
+
+      // 2. 左右方向移動與車道邊界限制
+      const minX = -ROAD_WIDTH / 2 + CAR_WIDTH / 2 + 0.2;
+      const maxX = ROAD_WIDTH / 2 - CAR_WIDTH / 2 - 0.2;
+
+      if (keys.left) player.x -= player.turnSpeed * dt;
+      if (keys.right) player.x += player.turnSpeed * dt;
+      player.x = Math.max(minX, Math.min(maxX, player.x));
+
+      // 3. 烏龜車固定均速前進
+      const avgTurtleSpeed = (turtleA.speed + turtleB.speed) / 2;
+      const scale = 0.25;
+
+      const turtleWorldMove = avgTurtleSpeed * scale * dt;
+      turtleA.relativeY -= turtleWorldMove;
+      turtleB.relativeY -= turtleWorldMove;
+
+      // 4. 正確的相對速度逼近計算
+      const relativeSpeedKmh = player.speed - avgTurtleSpeed; 
+      const relativeMoveZ = relativeSpeedKmh * scale * dt;
+      
+      player.zDistFromTurtle -= relativeMoveZ;
+
+      // 【精準撞擊與防線機制】
+      const minSafeDistance = CAR_LENGTH * 0.95; // 接近 1 倍車身時
+      if (player.zDistFromTurtle < minSafeDistance) {
+        // 如果踩著油門且車速高於烏龜車，直接視為「硬衝追撞」觸發車禍！
+        if (player.speed > avgTurtleSpeed + 1.5) {
+          triggerAccident();
+          return;
+        }
+        // 否則視為安全跟車，頂在安全距離處並強制同步車速
+        player.zDistFromTurtle = minSafeDistance; 
+        player.speed = avgTurtleSpeed;          
+      }
+      
+      if (player.zDistFromTurtle > 35) player.zDistFromTurtle = 35;
+
+      const turtleBaseZ = turtleA.relativeY;
+      turtleB.relativeY = turtleBaseZ - 0.5; // 兩車極小前後交錯
+      player.y = turtleBaseZ + player.zDistFromTurtle;
+
+      // 5. 道路背景捲動（依據真實時速）
+      roadOffset += player.speed * 0.8 * dt;
+
+      // 6. 對話框隨機切換
+      quoteTimer += dt;
+      if (quoteTimer > 4.0) {
+        quoteTimer = 0;
+        turtleA.talk = turtleQuotesA[Math.floor(Math.random() * turtleQuotesA.length)];
+        turtleB.talk = turtleQuotesB[Math.floor(Math.random() * turtleQuotesB.length)];
+        document.getElementById('bubbleA').innerText = turtleA.talk;
+        document.getElementById('bubbleB').innerText = turtleB.talk;
+      }
+
+      // 7. 近距離貼車怒氣計算
+      const triggerDistance = CAR_LENGTH * 1.3;
+      if (player.zDistFromTurtle <= triggerDistance) {
+        rage += 25 * dt; 
+        if (rage > 100) rage = 100;
+        updateRageDisplay();
+      }
+
+      // 8. 全方位 3D AABB 實體碰撞檢查 (針對橫向切車或直接撞擊)
+      checkCollision(turtleA.x, turtleA.relativeY);
+      checkCollision(turtleB.x, turtleB.relativeY);
+
+      document.getElementById('speedDisplay').innerText = player.speed.toFixed(1);
+
+      if (rage >= 100 && !isGameOver) {
+        showProofModal();
+      }
+    }
+
+    // 修復版 3D 實體碰撞檢測
+    function checkCollision(turtleX, turtleZ) {
+      const pLeft = player.x - CAR_WIDTH * 0.45;
+      const pRight = player.x + CAR_WIDTH * 0.45;
+      const pFront = player.y - CAR_LENGTH * 0.45;
+      const pBack = player.y + CAR_LENGTH * 0.45;
+
+      const tLeft = turtleX - CAR_WIDTH * 0.45;
+      const tRight = turtleX + CAR_WIDTH * 0.45;
+      const tFront = turtleZ - CAR_LENGTH * 0.45;
+      const tBack = turtleZ + CAR_LENGTH * 0.45;
+
+      // 發生幾何卡位或側碰時觸發車禍
+      if (pRight > tLeft && pLeft < tRight && pFront < tBack && pBack > tFront) {
+        triggerAccident();
+      }
+    }
+
+    function updateRageDisplay() {
+      document.getElementById('rageBar').style.width = `${rage}%`;
+      document.getElementById('rageText').innerText = `${Math.floor(rage)}%`;
+    }
+
+    function showProofModal() {
+      isGameOver = true;
+      document.getElementById('proofModal').classList.remove('hidden');
+    }
+
+    function triggerAccident() {
+      if (isGameOver) return;
+      isGameOver = true;
+      sound.playCrash();
+      document.getElementById('accidentModal').classList.remove('hidden');
+    }
+
+    function resetGame() {
+      isGameOver = false;
+      rage = 0;
+      updateRageDisplay();
+      player.speed = 40.0;
+      player.x = LANE_RIGHT;
+      player.zDistFromTurtle = 18.0;
+      turtleA.relativeY = -18;
+      turtleB.relativeY = -18.5;
+      document.getElementById('proofModal').classList.add('hidden');
+      document.getElementById('accidentModal').classList.add('hidden');
+    }
+
+    // 3D 投影對話框位置計算
+    function updateSpeechBubbles() {
+      const projA = turtleMeshA.position.clone().add(new THREE.Vector3(0, 1.8, 0)).project(camera);
+      const projB = turtleMeshB.position.clone().add(new THREE.Vector3(0, 1.8, 0)).project(camera);
+
+      const bubbleA = document.getElementById('bubbleA');
+      const bubbleB = document.getElementById('bubbleB');
+
+      if (projA.z < 1) {
+        const x = (projA.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(projA.y * 0.5) + 0.5) * window.innerHeight;
+        bubbleA.style.left = `${x}px`;
+        bubbleA.style.top = `${y}px`;
+        bubbleA.style.opacity = '1';
+      } else {
+        bubbleA.style.opacity = '0';
+      }
+
+      if (projB.z < 1) {
+        const x = (projB.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(projB.y * 0.5) + 0.5) * window.innerHeight;
+        bubbleB.style.left = `${x}px`;
+        bubbleB.style.top = `${y}px`;
+        bubbleB.style.opacity = '1';
+      } else {
+        bubbleB.style.opacity = '0';
+      }
+    }
+
+    // 主動畫渲染循環
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min(clock.getDelta(), 0.1);
+      updateGameLogic(dt);
+
+      // 同步 3D 車輛 Mesh 位置
+      playerMesh.position.set(player.x, 0, player.y);
+      turtleMeshA.position.set(turtleA.x, 0, turtleA.relativeY);
+      turtleMeshB.position.set(turtleB.x, 0, turtleB.relativeY);
+
+      // 車道黃虛線捲動
+      lineMarkings.forEach((line, index) => {
+        line.position.z = -index * 12 + (roadOffset % 12);
+      });
+
+      // 相機動態跟隨
+      camera.position.x = player.x * 0.3;
+      camera.position.y = 4.0;
+      camera.position.z = player.y + 7.5;
+      camera.lookAt(player.x * 0.2, 0.8, player.y - 8);
+
+      // 更新頭頂 3D 對話框
+      updateSpeechBubbles();
+
+      renderer.render(scene, camera);
+    }
+
+    // 視窗自動適應
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // 啟動專案
+    animate();
+  </script>
+</body>
+</html>
