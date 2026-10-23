@@ -14,163 +14,160 @@
       -webkit-user-select: none;
     }
 
-    body {
+    html, body {
       font-family: 'Noto Sans TC', sans-serif;
       background-color: #0f172a;
       color: #f8fafc;
       overflow: hidden;
       margin: 0;
       padding: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
     }
 
     .glass-panel {
       background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .btn-touch {
-      transition: all 0.1s ease;
-      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.15);
     }
+
+    /* 浮貼按鈕樣式 */
+    .btn-touch {
+      transition: all 0.08s ease;
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
     .btn-touch:active, .btn-touch.active {
-      transform: scale(0.92);
-      background: #3b82f6;
+      transform: scale(0.90);
+      background: rgba(59, 130, 246, 0.9);
       border-color: #60a5fa;
-      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.7);
     }
 
+    /* 喇叭鍵浮貼樣式 */
     .btn-horn {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
+      background: rgba(220, 38, 38, 0.8);
+      border: 1.5px solid rgba(248, 113, 113, 0.5);
     }
     .btn-horn:active, .btn-horn.active {
-      transform: scale(0.95);
-      background: linear-gradient(135deg, #f87171, #ef4444);
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+      transform: scale(0.92);
+      background: rgba(239, 68, 68, 0.98);
+      box-shadow: 0 0 22px rgba(239, 68, 68, 0.85);
     }
   </style>
 </head>
-<body class="flex w-screen h-screen overflow-hidden bg-slate-950">
+<body class="relative w-full h-full overflow-hidden bg-slate-950">
 
-  <!-- 左側/中央 遊戲畫面區 (主視角) -->
-  <div class="relative flex-1 h-full overflow-hidden bg-slate-900 flex items-center justify-center">
-    
-    <!-- Canvas 畫布 -->
-    <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+  <!-- 1. Canvas 遊戲畫布 (全螢幕滿版) -->
+  <canvas id="gameCanvas" class="absolute inset-0 w-full h-full block z-0"></canvas>
 
-    <!-- 頂部 HUD (時速與怒氣條) -->
-    <div class="absolute top-4 left-4 right-4 lg:right-auto lg:w-80 pointer-events-none z-10 flex flex-col gap-2">
-      <div class="glass-panel rounded-2xl p-3 shadow-2xl flex items-center justify-between border border-slate-700/50">
-        <div>
-          <div class="text-xs text-slate-400 font-bold tracking-wider">我方時速 (SPEED)</div>
-          <div class="text-3xl font-black text-amber-400 flex items-baseline gap-1">
-            <span id="speedDisplay">40.0</span>
-            <span class="text-xs text-slate-300 font-normal">km/h</span>
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="text-xs text-slate-400 font-bold tracking-wider">烏龜車速 (LIMIT)</div>
-          <div class="text-lg font-bold text-sky-400">
-            ~42.0 <span class="text-xs text-slate-300">km/h</span>
-          </div>
+  <!-- 2. 頂部面板：浮貼在最上方 (HUD 時速與怒氣值) -->
+<div class="absolute top-3 left-3 right-3 pointer-events-none z-10 flex flex-col gap-2 max-w-md mx-auto lg:mx-0 lg:w-80">
+      <!-- 時速與板面 -->
+    <div class="glass-panel rounded-2xl p-2.5 px-4 shadow-xl flex items-center justify-between">
+      <div>
+        <div class="text-[10px] text-slate-300 font-bold tracking-wider">我方時速 (SPEED)</div>
+        <div class="text-2xl font-black text-amber-400 flex items-baseline gap-1">
+          <span id="speedDisplay">40.0</span>
+          <span class="text-xs text-slate-300 font-normal">km/h</span>
         </div>
       </div>
-
-      <!-- 怒氣值 Meter -->
-      <div class="glass-panel rounded-2xl p-3 shadow-2xl border border-slate-700/50">
-        <div class="flex justify-between items-center mb-1">
-          <span class="text-xs font-bold text-slate-300 flex items-center gap-1">
-            🔥 怒氣累積值 (近距離貼車觸發)
-          </span>
-          <span id="rageText" class="text-xs font-black text-rose-400">0%</span>
-        </div>
-        <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700">
-          <div id="rageBar" class="bg-gradient-to-r from-amber-500 via-rose-500 to-red-600 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
+      <div class="text-right">
+        <div class="text-[10px] text-slate-300 font-bold tracking-wider">烏龜車速 (LIMIT)</div>
+        <div class="text-base font-bold text-sky-400">
+          ~42.0 <span class="text-xs text-slate-300">km/h</span>
         </div>
       </div>
     </div>
 
-    <!-- 證明完畢 Card Modal -->
-    <div id="proofModal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
-      <div class="glass-panel bg-slate-900/90 border border-rose-500/30 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-4 animate-bounce-in">
-        <div class="inline-block p-3 bg-rose-500/10 rounded-full border border-rose-500/20 text-3xl">
-          🐢🐢
-        </div>
-        <h2 class="text-2xl font-black text-rose-400 tracking-wide">
-          《烏龜車成雙定理》
-        </h2>
-        <div class="text-lg font-bold text-slate-200 bg-slate-800/80 py-2 rounded-xl border border-slate-700">
-          狀況一：證明完畢！
-        </div>
-        <p class="text-sm text-slate-300 leading-relaxed text-left bg-slate-950/50 p-4 rounded-xl border border-slate-800">
-          不管你怎麼踩油門切換車道，兩台烏龜車始終維持 <span class="text-amber-400 font-bold">&lt; 1倍車身</span> 的極小縱向差距併排龜速行駛，形成完美的「移動路障鐵幕」。
-        </p>
-        <button onclick="resetGame()" class="w-full py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
-          🔄 再次驗證定理
-        </button>
+    <!-- 怒氣值 Meter -->
+    <div class="glass-panel rounded-2xl p-2.5 px-4 shadow-xl">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-xs font-bold text-slate-200 flex items-center gap-1">
+          🔥 怒氣累積值 (近距離貼車觸發)
+        </span>
+        <span id="rageText" class="text-xs font-black text-rose-400">0%</span>
       </div>
-    </div>
-
-    <!-- 事故 Modal (進警局) -->
-    <div id="accidentModal" class="hidden absolute inset-0 bg-red-950/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
-      <div class="glass-panel bg-slate-900/90 border border-red-500/50 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-4">
-        <div class="inline-block p-4 bg-red-500/20 rounded-full text-4xl animate-pulse">
-          🚓
-        </div>
-        <h2 class="text-2xl font-black text-red-500 tracking-wide">
-          發生交通事故！
-        </h2>
-        <div class="text-xl font-bold text-white bg-red-900/50 py-3 rounded-xl border border-red-700/50">
-          你已被送進警察局 👮‍♂️
-        </div>
-        <p class="text-sm text-slate-300 leading-relaxed">
-          由於未保持安全車距追撞前車，警察杯杯已將你帶回派出所做筆錄。請保持理智，勿近距離逼車！
-        </p>
-        <button onclick="resetGame()" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
-          📝 簽交保單 (重新開始)
-        </button>
+      <div class="w-full bg-slate-950/80 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-700">
+        <div id="rageBar" class="bg-gradient-to-r from-amber-500 via-rose-500 to-red-600 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
       </div>
     </div>
   </div>
 
-  <!-- 右側/底部 控制面板 (手機版/觸控版顯示，大螢幕 lg: 隱藏) -->
-  <div class="block lg:hidden w-80 h-full glass-panel border-l border-slate-800 p-4 flex flex-col justify-between z-20">
-    <div class="space-y-2">
-      <h3 class="text-sm font-bold text-slate-400 tracking-wider flex items-center gap-2">
-        🎮 駕駛控制台
-      </h3>
-      <p class="text-xs text-slate-500">按鍵控制我方車輛加速、減速與左右切換</p>
-    </div>
+  <!-- 3. 底部按鍵控制區：浮貼於畫面最下方（我方車輛正下方，手機/小螢幕顯示，大螢幕隱藏） -->
+  <div class="absolute bottom-4 left-0 right-0 z-20 flex justify-between items-end px-6 max-w-md mx-auto pointer-events-auto md:hidden">
+    
+    <!-- 左側：直立長條型按喇叭鍵 -->
+    <button id="btnHorn" class="btn-touch btn-horn w-16 h-36 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-2xl">
+      <span class="text-2xl">📣</span>
+      <span class="text-xs font-black tracking-widest" style="writing-mode: vertical-lr;">喇叭鍵</span>
+    </button>
 
-    <!-- 方向鍵控制器 (DPad) -->
-    <div class="flex flex-col items-center gap-2 my-auto">
-      <button id="btnUp" class="btn-touch w-16 h-16 rounded-2xl flex items-center justify-center text-2xl text-slate-200 shadow-md">
+    <!-- 右側：十字方向鍵 (上、下、左、右) -->
+    <div class="flex flex-col items-center gap-1.5">
+      <!-- 上鍵 -->
+      <button id="btnUp" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
         ▲
       </button>
-      <div class="flex gap-2">
-        <button id="btnLeft" class="btn-touch w-16 h-16 rounded-2xl flex items-center justify-center text-2xl text-slate-200 shadow-md">
+      <!-- 左、下、右鍵 -->
+      <div class="flex gap-1.5">
+        <button id="btnLeft" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
           ◀
         </button>
-        <button id="btnDown" class="btn-touch w-16 h-16 rounded-2xl flex items-center justify-center text-2xl text-slate-200 shadow-md">
+        <button id="btnDown" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
           ▼
         </button>
-        <button id="btnRight" class="btn-touch w-16 h-16 rounded-2xl flex items-center justify-center text-2xl text-slate-200 shadow-md">
+        <button id="btnRight" class="btn-touch w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg">
           ▶
         </button>
       </div>
-
-      <!-- 按喇叭 (Enter 鍵) -->
-      <button id="btnHorn" class="btn-touch btn-horn w-full py-4 mt-4 rounded-2xl text-white font-black text-base shadow-lg flex items-center justify-center gap-2">
-        📣 按喇叭 (Enter 鍵)
-      </button>
     </div>
 
-    <div class="text-center text-xs text-slate-500">
-      支援電腦鍵盤 WASD / 方向鍵 / Enter
+  </div>
+
+  <!-- 證明完畢 Card Modal -->
+  <div id="proofModal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
+    <div class="glass-panel bg-slate-900/90 border border-rose-500/30 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-4">
+      <div class="inline-block p-3 bg-rose-500/10 rounded-full border border-rose-500/20 text-3xl">
+        🐢🐢
+      </div>
+      <h2 class="text-2xl font-black text-rose-400 tracking-wide">
+        《烏龜車成雙定理》
+      </h2>
+      <div class="text-lg font-bold text-slate-200 bg-slate-800/80 py-2 rounded-xl border border-slate-700">
+        狀況一：證明完畢！
+      </div>
+      <p class="text-sm text-slate-300 leading-relaxed text-left bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+        不管你怎麼踩油門切換車道，兩台烏龜車始終維持 <span class="text-amber-400 font-bold">&lt; 1倍車身</span> 的極小縱向差距併排龜速行駛，形成完美的「移動路障鐵幕」。
+      </p>
+      <button onclick="resetGame()" class="w-full py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+        🔄 再次驗證定理
+      </button>
+    </div>
+  </div>
+
+  <!-- 事故 Modal (進警局) -->
+  <div id="accidentModal" class="hidden absolute inset-0 bg-red-950/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
+    <div class="glass-panel bg-slate-900/90 border border-red-500/50 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-4">
+      <div class="inline-block p-4 bg-red-500/20 rounded-full text-4xl animate-pulse">
+        🚓
+      </div>
+      <h2 class="text-2xl font-black text-red-500 tracking-wide">
+        發生交通事故！
+      </h2>
+      <div class="text-xl font-bold text-white bg-red-900/50 py-3 rounded-xl border border-red-700/50">
+        你已被送進警察局 👮‍♂️
+      </div>
+      <p class="text-sm text-slate-300 leading-relaxed">
+        由於未保持安全車距追撞前車，警察杯杯已將你帶回派出所做筆錄。請保持理智，勿近距離逼車！
+      </p>
+      <button onclick="resetGame()" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+        📝 簽交保單 (重新開始)
+      </button>
     </div>
   </div>
 
@@ -194,8 +191,8 @@
 
         osc1.type = 'sawtooth';
         osc2.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(415, this.ctx.currentTime); // G4#
-        osc2.frequency.setValueAtTime(520, this.ctx.currentTime); // C5#
+        osc1.frequency.setValueAtTime(415, this.ctx.currentTime);
+        osc2.frequency.setValueAtTime(520, this.ctx.currentTime);
 
         gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
@@ -243,55 +240,49 @@
     const CAR_LENGTH = 88;
     const CAR_WIDTH = 65.2;
 
-    // 我方紅車（畫面固定在下方中央作為參考系）
+    // 我方紅車
     const player = {
       x: 0,
       y: 0,
-      speed: 40.0, // km/h
+      speed: 40.0,
       maxSpeed: 100.0,
       minSpeed: 20.0,
-      accel: 12.0,    // 平滑舒適的加速度
-      decel: 18.0,    // 平滑煞車
-      friction: 5.0,  // 放開油門的自然阻力
-      turnSpeed: 280  // px/sec 左右移動速度
+      accel: 12.0,
+      decel: 18.0,
+      friction: 5.0,
+      turnSpeed: 280
     };
 
-    // 烏龜車 A (右車道) 與 B (左車道)
+    // 烏龜車 A & B
     const turtleA = { x: 0, relativeY: -220, speed: 41.5, talk: "天氣真好～" };
-    const turtleB = { x: 0, relativeY: -260, speed: 42.0, talk: "慢慢開最安全" };
+    const turtleB = { x: 0, relativeY: -260, speed: 42.0, talk: "不急不急～" };
 
     const turtleQuotesA = ["天氣真好～", "慢慢開最安全", "急什麼呢？", "享受風景呀", "安全第一！"];
     const turtleQuotesB = ["旁邊有車耶", "後方車靠好近", "速限40剛剛好", "穩穩開就好", "不急不急～"];
 
     let quoteTimer = 0;
 
-    // 按鍵輸入狀態
-    const keys = {
-      up: false,
-      down: false,
-      left: false,
-      right: false
-    };
+    // 按鍵狀態
+    const keys = { up: false, down: false, left: false, right: false };
 
-    // 初始化 Canvas 尺寸
+    // 適應視窗調整 Canvas 尺寸與車輛座標
     function resizeCanvas() {
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
 
-      // 重置車輛初始 X 座標 (以 road 為中心)
       const centerX = canvas.width / 2;
-      const laneOffset = 65; // 限制車道寬度，防止縫隙超車
+      const laneOffset = 65;
 
-      player.x = centerX + laneOffset; // 預設在右車道
-      player.y = canvas.height * 0.72; // 固定在畫面中下方
+      player.x = centerX + laneOffset;
+      player.y = canvas.height * 0.72;
 
-      turtleA.x = centerX + laneOffset; // 右車道
-      turtleB.x = centerX - laneOffset; // 左車道
+      turtleA.x = centerX + laneOffset;
+      turtleB.x = centerX - laneOffset;
     }
 
     window.addEventListener('resize', resizeCanvas);
 
-    // --- 事件監聽 (鍵盤) ---
+    // 鍵盤監聽
     window.addEventListener('keydown', (e) => {
       sound.init();
       if (isGameOver) return;
@@ -301,9 +292,7 @@
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
 
-      if (e.key === 'Enter') {
-        triggerHorn();
-      }
+      if (e.key === 'Enter') triggerHorn();
     });
 
     window.addEventListener('keyup', (e) => {
@@ -313,7 +302,7 @@
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
     });
 
-    // --- 事件監聽 (觸控按鈕) ---
+    // 觸控按鈕綁定
     function bindTouchBtn(id, keyName) {
       const btn = document.getElementById(id);
       if (!btn) return;
@@ -344,7 +333,8 @@
 
     const btnHorn = document.getElementById('btnHorn');
     if (btnHorn) {
-      btnHorn.addEventListener('click', () => {
+      btnHorn.addEventListener('click', (e) => {
+        e.preventDefault();
         triggerHorn();
       });
     }
@@ -356,22 +346,21 @@
       updateRageDisplay();
     }
 
-    // --- 主遊戲邏輯更新 ---
+    // 邏輯更新
     let lastTime = performance.now();
 
     function update(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.1); // 秒
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
 
       if (isGameOver) return;
 
-      // 1. 車速控制 (以我車為基準)
+      // 1. 我方車速控制
       if (keys.up) {
         player.speed += player.accel * dt * 5;
       } else if (keys.down) {
         player.speed -= player.decel * dt * 5;
       } else {
-        // 自然阻力阻尼
         if (player.speed > 40.0) {
           player.speed -= player.friction * dt * 2;
         } else if (player.speed < 40.0) {
@@ -379,35 +368,28 @@
         }
       }
 
-      // 限速鎖定
       player.speed = Math.max(player.minSpeed, Math.min(player.maxSpeed, player.speed));
 
-      // 2. 左右轉向 (限制於道路邊界內)
-      const roadWidth = 280; // 縮縮車道，防止縫隙超車
+      // 2. 左右方向移動
+      const roadWidth = 280;
       const minX = (canvas.width / 2) - (roadWidth / 2) + CAR_WIDTH / 2 + 10;
       const maxX = (canvas.width / 2) + (roadWidth / 2) - CAR_WIDTH / 2 - 10;
 
-      if (keys.left) {
-        player.x -= player.turnSpeed * dt;
-      }
-      if (keys.right) {
-        player.x += player.turnSpeed * dt;
-      }
+      if (keys.left) player.x -= player.turnSpeed * dt;
+      if (keys.right) player.x += player.turnSpeed * dt;
       player.x = Math.max(minX, Math.min(maxX, player.x));
 
-      // 3. 烏龜車動態與相對運動物理
-      // 烏龜車平均定速在 40 ~ 45 km/h
+      // 3. 烏龜車運動
       const avgTurtleSpeed = (turtleA.speed + turtleB.speed) / 2;
-      const relativeSpeed = player.speed - avgTurtleSpeed; // km/h
+      const relativeSpeed = player.speed - avgTurtleSpeed;
 
-      // 相對速度轉化為 Canvas Y 軸位移 (正數代表烏龜車向我車靠近, 即在畫面上向下移動)
-      const pxPerKmH = 12; // 速度與像素轉換比率
+      const pxPerKmH = 12;
       const deltaY = relativeSpeed * pxPerKmH * dt;
 
       turtleA.relativeY += deltaY;
       turtleB.relativeY += deltaY;
 
-      // 烏龜車成雙機制：兩車縱向差距嚴格保持在 < 1 倍車身 (0.2 ~ 0.8 車身之間微幅搖擺)
+      // 縱向間距鎖定 (< 1 車身)
       const maxGap = CAR_LENGTH * 0.8;
       const minGap = CAR_LENGTH * 0.2;
       let gap = Math.abs(turtleA.relativeY - turtleB.relativeY);
@@ -422,10 +404,9 @@
         turtleB.relativeY = turtleA.relativeY - minGap;
       }
 
-      // 背景道路滾動動畫 (根據我方車速)
       roadOffset += (player.speed * 8) * dt;
 
-      // 4. 對話框隨機切換
+      // 4. 對話框切換
       quoteTimer += dt;
       if (quoteTimer > 4.0) {
         quoteTimer = 0;
@@ -433,37 +414,30 @@
         turtleB.talk = turtleQuotesB[Math.floor(Math.random() * turtleQuotesB.length)];
       }
 
-      // 5. 距離與怒氣值計算
-
+      // 5. 近距離貼車怒氣計算
       /* **********************************
        這裡有 0.3 
       *********************************** */
-      const triggerDistance = CAR_LENGTH * 0.3; // 判定距離 threshold: 0.3 個車身
+      const triggerDistance = CAR_LENGTH * 0.3;
 
-      const distA = Math.hypot(player.x - turtleA.x, player.y - (player.y + turtleA.relativeY));
-      const distB = Math.hypot(player.x - turtleB.x, player.y - (player.y + turtleB.relativeY));
-
-      // 縱向貼車距離計算
       const yDistA = Math.abs(player.y - (player.y + turtleA.relativeY)) - CAR_LENGTH;
       const yDistB = Math.abs(player.y - (player.y + turtleB.relativeY)) - CAR_LENGTH;
 
       /* **********************************
-       這裡有 0.3 (貼車距離 < 0.3 車身時累積怒氣)
+       這裡有 0.3 
       *********************************** */
       if ((yDistA < triggerDistance && yDistA > -CAR_LENGTH) || (yDistB < triggerDistance && yDistB > -CAR_LENGTH)) {
-        rage += 15 * dt; // 近距離貼車怒氣快速上升
+        rage += 15 * dt;
         if (rage > 100) rage = 100;
         updateRageDisplay();
       }
 
-      // 6. 碰撞檢測 (Collision Detection)
+      // 6. 碰撞檢查
       checkCollision(turtleA, player.y + turtleA.relativeY);
       checkCollision(turtleB, player.y + turtleB.relativeY);
 
-      // UI 顯示更新
       document.getElementById('speedDisplay').innerText = player.speed.toFixed(1);
 
-      // 怒氣值滿 100% 觸發定理成立
       if (rage >= 100 && !isGameOver) {
         showProofModal();
       }
@@ -480,7 +454,6 @@
       const tTop = turtleY - CAR_LENGTH / 2;
       const tBottom = turtleY + CAR_LENGTH / 2;
 
-      // AABB 矩形碰撞檢測
       if (pRight > tLeft && pLeft < tRight && pBottom > tTop && pTop < tBottom) {
         triggerAccident();
       }
@@ -521,11 +494,11 @@
       const centerX = canvas.width / 2;
       const roadWidth = 280;
 
-      // 1. 繪製柏油路面
+      // 1. 柏油路面
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(centerX - roadWidth / 2, 0, roadWidth, canvas.height);
 
-      // 2. 繪製兩側雙白線
+      // 2. 兩側白線
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 6;
       ctx.beginPath();
@@ -535,8 +508,8 @@
       ctx.lineTo(centerX + roadWidth / 2 - 4, canvas.height);
       ctx.stroke();
 
-      // 3. 繪製中央虛線 (帶滾動 offset)
-      ctx.strokeStyle = '#f59e0b'; // 黃色虛線
+      // 3. 中央黃色虛線
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
       ctx.setLineDash([30, 30]);
       ctx.lineDashOffset = -roadOffset;
@@ -544,32 +517,30 @@
       ctx.moveTo(centerX, -60);
       ctx.lineTo(centerX, canvas.height + 60);
       ctx.stroke();
-      ctx.setLineDash([]); // 重置虛線
+      ctx.setLineDash([]);
 
-      // 4. 繪製烏龜車 A & B
+      // 4. 烏龜車 A & B
       drawCar(turtleA.x, player.y + turtleA.relativeY, '#06b6d4', '🐢 A', turtleA.talk);
       drawCar(turtleB.x, player.y + turtleB.relativeY, '#10b981', '🐢 B', turtleB.talk);
 
-      // 5. 繪製我方紅車
+      // 5. 我方紅車
       drawCar(player.x, player.y, '#ef4444', '我方 (急)', null, true);
 
-      // 請求下一影格
       requestAnimationFrame((now) => {
         update(now);
         render();
       });
     }
 
-    // 繪製車輛通用函式
     function drawCar(x, y, color, label, talkText = null, isPlayer = false) {
       ctx.save();
       ctx.translate(x, y);
 
-      // 車身陰影
+      // 陰影
       ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
       ctx.fillRect(-CAR_WIDTH / 2 + 4, -CAR_LENGTH / 2 + 6, CAR_WIDTH, CAR_LENGTH);
 
-      // 車體主體 (圓角矩形)
+      // 車體
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.roundRect(-CAR_WIDTH / 2, -CAR_LENGTH / 2, CAR_WIDTH, CAR_LENGTH, 12);
@@ -578,7 +549,7 @@
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // 車頂/擋風玻璃
+      // 擋風玻璃
       ctx.fillStyle = '#0f172a';
       ctx.beginPath();
       ctx.roundRect(-CAR_WIDTH / 2 + 6, -CAR_LENGTH / 4, CAR_WIDTH - 12, CAR_LENGTH / 2, 6);
@@ -586,12 +557,10 @@
 
       // 車燈
       if (isPlayer) {
-        // 我方頭燈 (黃色光芒)
         ctx.fillStyle = '#fef08a';
         ctx.fillRect(-CAR_WIDTH / 2 + 4, -CAR_LENGTH / 2 - 2, 10, 4);
         ctx.fillRect(CAR_WIDTH / 2 - 14, -CAR_LENGTH / 2 - 2, 10, 4);
       } else {
-        // 烏龜車尾燈 (紅色亮燈)
         ctx.fillStyle = '#dc2626';
         ctx.fillRect(-CAR_WIDTH / 2 + 4, CAR_LENGTH / 2 - 2, 10, 4);
         ctx.fillRect(CAR_WIDTH / 2 - 14, CAR_LENGTH / 2 - 2, 10, 4);
@@ -603,7 +572,7 @@
       ctx.textAlign = 'center';
       ctx.fillText(label, 0, 4);
 
-      // 對話框 (上方前方繪製，防止遮擋速度讀數)
+      // 對話框
       if (talkText) {
         ctx.font = 'bold 11px "Noto Sans TC"';
         const textWidth = ctx.measureText(talkText).width;
@@ -627,7 +596,7 @@
       ctx.restore();
     }
 
-    // 啟動遊戲
+    // 啟動與初始化
     resizeCanvas();
     requestAnimationFrame((now) => {
       lastTime = now;
