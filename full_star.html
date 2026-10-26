@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trig Triangle Blast - 直角三角形三角函數爆破對決</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;600;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        neonCyan: '#00f3ff',
+                        neonPink: '#ff0055',
+                        neonYellow: '#ffea00',
+                        darkBg: '#0b0f19',
+                        cardBg: '#151c2e'
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        noto: ['Noto Sans TC', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .animate-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        .keypad-btn {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.08s ease;
+        }
+        .keypad-btn:active {
+            transform: scale(0.94);
+            background: #334155;
+            border-color: #00f3ff;
+        }
+        #explosion-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .katex-display {
+            margin: 0.3em 0 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-3 sm:p-4 overflow-x-hidden">
+
+    <!-- Explosion Overlay Canvas -->
+    <canvas id="explosion-canvas"></canvas>
+
+    <!-- Header / Score Board -->
+    <header class="w-full max-w-md flex justify-between items-center bg-cardBg/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700/60 shadow-lg mb-2">
+        <div>
+            <div class="text-[10px] text-slate-400 font-semibold tracking-wider">SCORE</div>
+            <div id="score-display" class="text-xl font-black orbitron text-neonCyan">0</div>
+        </div>
+        <div class="text-center">
+            <div class="text-[10px] text-slate-400 font-semibold tracking-wider">STREAK</div>
+            <div id="streak-display" class="text-lg font-bold orbitron text-neonYellow flex items-center justify-center gap-1">
+                <span>⚡</span><span id="streak-count">0</span>
+            </div>
+        </div>
+        <div class="text-right">
+            <div class="text-[10px] text-slate-400 font-semibold tracking-wider">BEST</div>
+            <div id="best-score-display" class="text-lg font-bold orbitron text-slate-300">0</div>
+        </div>
+    </header>
+
+    <!-- Game Arena Container -->
+    <main id="game-card" class="w-full max-w-md bg-cardBg/90 backdrop-blur-xl border border-slate-700 rounded-3xl p-4 shadow-2xl flex flex-col justify-between flex-grow relative overflow-hidden my-auto">
+        
+        <!-- Timer Bar & Fuse Visual -->
+        <div class="w-full mb-2">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-bold text-neonPink flex items-center gap-1 orbitron">
+                    <i class="fa-solid fa-bomb animate-bounce"></i> FUSE TIMER
+                </span>
+                <span id="timer-text" class="text-sm font-black orbitron text-neonPink">20.0</span>
+            </div>
+            <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                <div id="timer-bar" class="h-full bg-gradient-to-r from-neonCyan via-neonYellow to-neonPink rounded-full transition-all duration-100 ease-linear w-full"></div>
+            </div>
+        </div>
+
+        <!-- Question & Triangle Canvas Section -->
+        <div class="my-auto py-1 text-center flex flex-col justify-center items-center">
+            <!-- Triangle Graphic Canvas -->
+            <div class="relative w-48 h-36 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-center mb-2 shadow-inner overflow-hidden">
+                <canvas id="triangle-canvas" width="192" height="144"></canvas>
+            </div>
+            
+            <div id="question-text" class="text-xl sm:text-2xl font-bold my-1 text-white">
+                <!-- KaTeX Question will render here -->
+            </div>
+        </div>
+
+        <!-- Scratchpad Toggle & Drawer -->
+        <div class="w-full mb-2">
+            <button type="button" onclick="toggleScratchpad()" class="w-full py-1.5 px-3 bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-between transition-colors shadow">
+                <span class="flex items-center gap-2 text-neonCyan">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>點擊此展開顯示計算紙</span>
+                </span>
+                <i id="scratchpad-icon" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+            </button>
+            <div id="scratchpad-container" class="hidden mt-2 p-2 bg-slate-900/95 rounded-2xl border border-slate-700/80 shadow-inner">
+                <div class="relative w-full h-32 bg-slate-950 rounded-xl overflow-hidden touch-none border border-slate-800">
+                    <canvas id="scratchpad-canvas" class="w-full h-full cursor-crosshair"></canvas>
+                </div>
+                <div class="flex justify-between items-center mt-1.5 px-1">
+                    <span class="text-[10px] text-slate-500">可在畫面上塗鴉計算</span>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="undoScratchpad()" class="px-2 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">
+                            <i class="fa-solid fa-rotate-left mr-1"></i>復原
+                        </button>
+                        <button type="button" onclick="clearScratchpad()" class="px-2 py-0.5 text-xs bg-neonPink/20 hover:bg-neonPink/30 text-neonPink rounded-lg border border-neonPink/30">
+                            <i class="fa-solid fa-trash-can mr-1"></i>清空
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Math Answer Display Input Box -->
+        <div class="w-full bg-slate-900/90 border-2 border-slate-700 focus-within:border-neonCyan rounded-2xl p-2.5 mb-3 text-center min-h-[56px] flex items-center justify-center relative shadow-inner">
+            <div id="math-input-display" class="text-xl sm:text-2xl text-neonCyan font-bold tracking-wider">
+                <!-- Rendered LaTeX Answer Input -->
+            </div>
+            <div id="input-placeholder" class="text-slate-600 text-xs italic absolute">點擊下方按鈕輸入答案...</div>
+        </div>
+
+        <!-- Custom Math Keypad -->
+        <div class="grid grid-cols-4 gap-1.5 mb-1">
+            <button onclick="inputKey('√')" class="keypad-btn p-2.5 text-neonCyan font-bold text-lg rounded-xl shadow border-neonCyan/20">√</button>
+            <button onclick="inputKey('/')" class="keypad-btn p-2.5 text-neonCyan font-bold text-lg rounded-xl shadow border-neonCyan/20">/</button>
+            <button onclick="inputKey('±')" class="keypad-btn p-2.5 text-neonCyan font-bold text-base rounded-xl shadow border-neonCyan/20">±</button>
+            <button onclick="inputBackspace()" class="keypad-btn p-2.5 text-neonPink font-bold text-lg rounded-xl shadow hover:bg-neonPink/20">
+                <i class="fa-solid fa-backspace"></i>
+            </button>
+
+            <button onclick="inputKey('7')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">7</button>
+            <button onclick="inputKey('8')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">8</button>
+            <button onclick="inputKey('9')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">9</button>
+            <button onclick="inputKey('-')" class="keypad-btn p-2.5 text-neonCyan font-bold text-lg rounded-xl">-</button>
+
+            <button onclick="inputKey('4')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">4</button>
+            <button onclick="inputKey('5')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">5</button>
+            <button onclick="inputKey('6')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">6</button>
+            <button onclick="inputClear()" class="keypad-btn p-2.5 text-amber-400 font-bold text-xs rounded-xl uppercase">C</button>
+
+            <button onclick="inputKey('1')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">1</button>
+            <button onclick="inputKey('2')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">2</button>
+            <button onclick="inputKey('3')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">3</button>
+            <button onclick="submitAnswer()" class="keypad-btn row-span-2 p-2.5 bg-gradient-to-b from-neonCyan to-blue-600 text-slate-950 font-black text-xl rounded-xl shadow-lg flex items-center justify-center active:scale-95 transition-transform">
+                <i class="fa-solid fa-paper-plane text-xl"></i>
+            </button>
+
+            <button onclick="inputKey('0')" class="keypad-btn col-span-2 p-2.5 text-white font-bold text-lg rounded-xl">0</button>
+            <button onclick="inputKey('.')" class="keypad-btn p-2.5 text-white font-bold text-lg rounded-xl">.</button>
+        </div>
+    </main>
+
+    <!-- Footer Controls & Mute -->
+    <footer class="w-full max-w-md flex justify-between items-center text-[11px] text-slate-500 mt-1.5 px-2">
+        <button id="sound-btn" onclick="toggleSound()" class="flex items-center gap-1.5 hover:text-slate-300 transition-colors">
+            <i class="fa-solid fa-volume-high text-neonCyan" id="sound-icon"></i> <span id="sound-status">音效：開啟</span>
+        </button>
+        <div>直角三角形三角函數爆破 💥</div>
+    </footer>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-cardBg border-2 border-neonPink rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl relative overflow-hidden animate-shake">
+            <div class="text-6xl mb-2 animate-bounce">💥</div>
+            <h2 class="text-3xl font-black orbitron text-neonPink mb-1">BOOM!</h2>
+            <p id="game-over-reason" class="text-slate-300 text-sm mb-4">時間倒數結束，試題爆炸了！</p>
+
+            <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 mb-5 space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">正確答案 (Correct):</span>
+                    <span id="correct-answer-display" class="text-neonCyan font-bold text-lg"></span>
+                </div>
+                <hr class="border-slate-800 my-1">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">本次得分 (Score):</span>
+                    <span id="final-score" class="text-white font-black orbitron text-xl">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">最高連勝 (Best Streak):</span>
+                    <span id="final-streak" class="text-neonYellow font-bold orbitron">0</span>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-3.5 px-6 bg-gradient-to-r from-neonPink to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-2xl shadow-lg transition-all transform active:scale-95 orbitron tracking-wider text-lg">
+                <i class="fa-solid fa-rotate-right mr-2"></i>RETRY / 再試一次
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let score = 0;
+        let streak = 0;
+        let bestScore = 0;
+        let timeLeft = 20;
+        let totalTime = 20;
+        let timerInterval = null;
+        let currentQuestion = null;
+        let userInput = "";
+        let soundEnabled = true;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playBeep(freq = 440, type = 'sine', duration = 0.1) {
+            if (!soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function playExplosionSound() {
+            if (!soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const bufferSize = audioCtx.sampleRate * 0.8;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.8);
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                whiteNoise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                whiteNoise.start();
+            } catch(e){}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-status').innerText = soundEnabled ? '音效：開啟' : '音效：靜音';
+            document.getElementById('sound-icon').className = soundEnabled ? 'fa-solid fa-volume-high text-neonCyan' : 'fa-solid fa-volume-xmark text-slate-500';
+        }
+
+        // Triangle & Trig Problem Generator
+        const TRIANGLE_POOLS = [
+            { a: 3, b: 4, c: 5 },
+            { a: 5, b: 12, c: 13 },
+            { a: 8, b: 15, c: 17 },
+            { a: 7, b: 24, c: 25 },
+            { a: 6, b: 8, c: 10 },
+            { a: 9, b: 12, c: 15 }
+        ];
+
+        function generateQuestion() {
+            const triple = TRIANGLE_POOLS[Math.floor(Math.random() * TRIANGLE_POOLS.length)];
+            
+            // Assign vertices: C is right angle vertex (90 deg), A and B are acute angles
+            // Let legs be leg1 and leg2, hypotenuse be c
+            let leg1 = triple.a;
+            let leg2 = triple.b;
+            const hyp = triple.c;
+
+            if (Math.random() > 0.5) {
+                let tmp = leg1; leg1 = leg2; leg2 = tmp;
+            }
+
+            // Vertices names: A, B, C (C is right angle)
+            // Sides opposite to A, B, C are a, b, c
+            // Let side opposite to A be a (length leg1), side opposite to B be b (length leg2)
+            const aVal = leg1;
+            const bVal = leg2;
+
+            // Target function: sin, cos, tan for either A or B
+            const angleName = Math.random() > 0.5 ? 'A' : 'B';
+            const funcList = ['\\sin', '\\cos', '\\tan'];
+            const func = funcList[Math.floor(Math.random() * funcList.length)];
+
+            let valObj = {};
+            if (angleName === 'A') {
+                if (func === '\\sin') valObj = reduceFraction(aVal, hyp);
+                else if (func === '\\cos') valObj = reduceFraction(bVal, hyp);
+                else valObj = reduceFraction(aVal, bVal);
+            } else {
+                // angle B
+                if (func === '\\sin') valObj = reduceFraction(bVal, hyp);
+                else if (func === '\\cos') valObj = reduceFraction(aVal, hyp);
+                else valObj = reduceFraction(bVal, aVal);
+            }
+
+            const questionLatex = `\\text{求 } ${func} ${angleName} = ?`;
+            const answerLatex = formatValObjLatex(valObj);
+            const acceptableInputs = getAcceptableInputs(valObj);
+
+            return {
+                vertexA: 'A',
+                vertexB: 'B',
+                vertexC: 'C',
+                sideA: aVal,
+                sideB: bVal,
+                sideHyp: hyp,
+                angleName: angleName,
+                func: func,
+                questionLatex: questionLatex,
+                answerLatex: answerLatex,
+                acceptableInputs: acceptableInputs
+            };
+        }
+
+        function reduceFraction(num, den) {
+            function gcd(x, y) { return y === 0 ? x : gcd(y, x % y); }
+            const g = gcd(num, den);
+            return { num: num / g, den: den / g };
+        }
+
+        function formatValObjLatex(valObj) {
+            if (valObj.den === 1) return `${valObj.num}`;
+            return `\\frac{${valObj.num}}{${valObj.den}}`;
+        }
+
+        function getAcceptableInputs(valObj) {
+            if (valObj.den === 1) return [`${valObj.num}`];
+            return [`${valObj.num}/${valObj.den}`];
+        }
+
+        // Draw Tilted Right Triangle on Canvas (Fixed Scaling & Centering)
+        function drawTriangle(q) {
+            const canvas = document.getElementById('triangle-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 動態計算適當縮放比例，防止超出一半畫布
+            const padding = 35; // 留給文字標籤與頂點字母的緩衝空間
+            const maxDim = Math.max(q.sideA, q.sideB, q.sideHyp);
+            const availableRadius = Math.min(canvas.width, canvas.height) / 2 - padding;
+            const scale = availableRadius / (maxDim / 2);
+
+            const a = q.sideA * scale; // 邊 BC (對應頂點 A 的對邊)
+            const b = q.sideB * scale; // 邊 AC (對應頂點 B 的對邊)
+
+            // 未旋轉前以 C 點為原點 (0,0)
+            const localC = { x: 0, y: 0 };
+            const localA = { x: b, y: 0 };
+            const localB = { x: 0, y: -a };
+
+            // 計算幾何形心 (Centroid)，用來做旋轉中心平移
+            const centroid = {
+                x: (localC.x + localA.x + localB.x) / 3,
+                y: (localC.y + localA.y + localB.y) / 3
+            };
+
+            // 隨機旋轉角度
+            const rotAngle = Math.random() * Math.PI * 2;
+
+            ctx.save();
+            // 將畫布原點移至 Canvas 正中央
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(rotAngle);
+            // 修正平移量，將三角形形心鎖定在中心點
+            ctx.translate(-centroid.x, -centroid.y);
+
+            const pC = localC;
+            const pA = localA;
+            const pB = localB;
+
+            // 2. 畫三角形三條邊
+            ctx.strokeStyle = '#00f3ff';
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(pC.x, pC.y);
+            ctx.lineTo(pA.x, pA.y);
+            ctx.lineTo(pB.x, pB.y);
+            ctx.closePath();
+            ctx.stroke();
+
+            // 3. 畫直角符號
+            const boxSize = 8;
+            ctx.strokeStyle = '#ffea00';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(boxSize, 0);
+            ctx.lineTo(boxSize, -boxSize);
+            ctx.lineTo(0, -boxSize);
+            ctx.stroke();
+
+            // 4. 繪製頂點與標籤文字 (抗旋轉，讓文字保持水平直立)
+            ctx.restore(); // 暫時恢復 coordinate space 繪製獨立文字
+
+            const transformPoint = (pt) => {
+                const cos = Math.cos(rotAngle);
+                const sin = Math.sin(rotAngle);
+                const dx = pt.x - centroid.x;
+                const dy = pt.y - centroid.y;
+                return {
+                    x: canvas.width / 2 + dx * cos - dy * sin,
+                    y: canvas.height / 2 + dx * sin + dy * cos
+                };
+            };
+
+            const screenC = transformPoint(pC);
+            const screenA = transformPoint(pA);
+            const screenB = transformPoint(pB);
+
+            ctx.font = 'bold 12px "Noto Sans TC", sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // 計算向量方向將標籤推開
+            function drawLabel(pt, center, text, color = '#ffffff', font = 'bold 12px "Noto Sans TC"') {
+                const vx = pt.x - center.x;
+                const vy = pt.y - center.y;
+                const len = Math.hypot(vx, vy) || 1;
+                const dist = 14;
+                ctx.font = font;
+                ctx.fillStyle = color;
+                ctx.fillText(text, pt.x + (vx / len) * dist, pt.y + (vy / len) * dist);
+            }
+
+            const screenCenter = { x: canvas.width / 2, y: canvas.height / 2 };
+
+            // 繪製頂點標籤 A, B, C
+            drawLabel(screenC, screenCenter, 'C', '#00f3ff');
+            drawLabel(screenA, screenCenter, 'A', '#ffffff');
+            drawLabel(screenB, screenCenter, 'B', '#ffffff');
+
+            // 繪製邊長數字
+            const midAB = { x: (screenA.x + screenB.x) / 2, y: (screenA.y + screenB.y) / 2 };
+            const midAC = { x: (screenA.x + screenC.x) / 2, y: (screenA.y + screenC.y) / 2 };
+            const midBC = { x: (screenB.x + screenC.x) / 2, y: (screenB.y + screenC.y) / 2 };
+
+            drawLabel(midAB, screenCenter, q.sideHyp, '#ffea00', '11px "Orbitron"');
+            drawLabel(midAC, screenCenter, q.sideB, '#ffea00', '11px "Orbitron"');
+            drawLabel(midBC, screenCenter, q.sideA, '#ffea00', '11px "Orbitron"');
+        }
+        
+
+
+        // Game Flow & Timer
+        function startGame() {
+            score = 0;
+            streak = 0;
+            updateScoreBoard();
+            document.getElementById('game-over-modal').classList.add('hidden');
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            userInput = "";
+            updateInputDisplay();
+            
+            currentQuestion = generateQuestion();
+            drawTriangle(currentQuestion);
+
+            document.getElementById('question-text').innerHTML = `\\(${currentQuestion.questionLatex}\\)`;
+
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('game-card'), {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false}
+                    ]
+                });
+            }
+
+            totalTime = 20;
+            timeLeft = 20;
+            startTimer();
+        }
+
+        // Scratchpad
+        let scratchCanvas, scratchCtx;
+        let isDrawing = false;
+        let strokeHistory = [];
+        let currentStroke = [];
+
+        function initScratchpad() {
+            scratchCanvas = document.getElementById('scratchpad-canvas');
+            if (!scratchCanvas) return;
+            scratchCtx = scratchCanvas.getContext('2d');
+
+            const resizeScratch = () => {
+                const rect = scratchCanvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                scratchCanvas.width = rect.width * dpr;
+                scratchCanvas.height = rect.height * dpr;
+                scratchCtx.scale(dpr, dpr);
+                redrawScratchpad();
+            };
+            resizeScratch();
+
+            const getPos = (e) => {
+                const rect = scratchCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            };
+
+            const startDraw = (e) => {
+                isDrawing = true;
+                const pos = getPos(e);
+                currentStroke = [pos];
+                scratchCtx.beginPath();
+                scratchCtx.strokeStyle = '#00f3ff';
+                scratchCtx.lineWidth = 2.5;
+                scratchCtx.lineCap = 'round';
+                scratchCtx.lineJoin = 'round';
+                scratchCtx.moveTo(pos.x, pos.y);
+            };
+
+            const draw = (e) => {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                currentStroke.push(pos);
+                scratchCtx.lineTo(pos.x, pos.y);
+                scratchCtx.stroke();
+            };
+
+            const stopDraw = () => {
+                if (!isDrawing) return;
+                isDrawing = false;
+                if (currentStroke.length > 0) strokeHistory.push([...currentStroke]);
+                currentStroke = [];
+            };
+
+            scratchCanvas.addEventListener('mousedown', startDraw);
+            scratchCanvas.addEventListener('mousemove', draw);
+            scratchCanvas.addEventListener('mouseup', stopDraw);
+            scratchCanvas.addEventListener('mouseleave', stopDraw);
+            scratchCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); });
+            scratchCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+            scratchCanvas.addEventListener('touchend', stopDraw);
+        }
+
+        function toggleScratchpad() {
+            const container = document.getElementById('scratchpad-container');
+            const icon = document.getElementById('scratchpad-icon');
+            container.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+            if (!container.classList.contains('hidden') && !scratchCanvas) {
+                setTimeout(initScratchpad, 50);
+            }
+        }
+
+        function clearScratchpad() {
+            strokeHistory = [];
+            redrawScratchpad();
+        }
+
+        function undoScratchpad() {
+            strokeHistory.pop();
+            redrawScratchpad();
+        }
+
+        function redrawScratchpad() {
+            if (!scratchCtx || !scratchCanvas) return;
+            const rect = scratchCanvas.getBoundingClientRect();
+            scratchCtx.clearRect(0, 0, rect.width, rect.height);
+            strokeHistory.forEach(stroke => {
+                if (stroke.length === 0) return;
+                scratchCtx.beginPath();
+                scratchCtx.strokeStyle = '#00f3ff';
+                scratchCtx.lineWidth = 2.5;
+                scratchCtx.lineCap = 'round';
+                scratchCtx.lineJoin = 'round';
+                scratchCtx.moveTo(stroke[0].x, stroke[0].y);
+                for (let i = 1; i < stroke.length; i++) scratchCtx.lineTo(stroke[i].x, stroke[i].y);
+                scratchCtx.stroke();
+            });
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            updateTimerUI();
+
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    updateTimerUI();
+                    clearInterval(timerInterval);
+                    triggerExplosion("時間倒數結束，試題爆破！");
+                } else {
+                    updateTimerUI();
+                    if (timeLeft <= 3.0 && Math.floor(timeLeft * 10) % 2 === 0) {
+                        playBeep(880, 'square', 0.05);
+                    }
+                }
+            }, 100);
+        }
+
+        function updateTimerUI() {
+            const timerBar = document.getElementById('timer-bar');
+            const timerText = document.getElementById('timer-text');
+            const percentage = Math.max(0, (timeLeft / totalTime) * 100);
+            
+            timerBar.style.width = `${percentage}%`;
+            timerText.innerText = `${timeLeft.toFixed(1)}s`;
+
+            if (percentage < 30) {
+                timerBar.className = "h-full bg-neonPink rounded-full transition-all duration-100 ease-linear w-full animate-pulse";
+            } else {
+                timerBar.className = "h-full bg-gradient-to-r from-neonCyan via-neonYellow to-neonPink rounded-full transition-all duration-100 ease-linear w-full";
+            }
+        }
+
+        // Keypad
+        function inputKey(char) {
+            playBeep(520, 'sine', 0.05);
+            if (userInput.length >= 15) return;
+            if (char === '±') {
+                userInput = userInput.startsWith('-') ? userInput.substring(1) : '-' + userInput;
+            } else {
+                userInput += char;
+            }
+            updateInputDisplay();
+        }
+
+        function inputBackspace() {
+            playBeep(400, 'sine', 0.05);
+            userInput = userInput.slice(0, -1);
+            updateInputDisplay();
+        }
+
+        function inputClear() {
+            playBeep(350, 'sine', 0.05);
+            userInput = "";
+            updateInputDisplay();
+        }
+
+        function updateInputDisplay() {
+            const displayEl = document.getElementById('math-input-display');
+            const placeholderEl = document.getElementById('input-placeholder');
+
+            if (!userInput) {
+                displayEl.innerHTML = "";
+                placeholderEl.classList.remove('hidden');
+                return;
+            }
+            placeholderEl.classList.add('hidden');
+            let latexStr = convertInputToLatex(userInput);
+            try {
+                katex.render(latexStr, displayEl, { throwOnError: false });
+            } catch(e) {
+                displayEl.innerText = userInput;
+            }
+        }
+
+        function convertInputToLatex(str) {
+            let s = str;
+            if (s.includes('/')) {
+                let parts = s.split('/');
+                let num = parts[0] || "";
+                let den = parts[1] || "";
+                num = num.replace(/√(\d+)/g, '\\sqrt{$1}');
+                den = den.replace(/√(\d+)/g, '\\sqrt{$1}');
+                return `\\frac{${num}}{${den}}`;
+            } else {
+                return s.replace(/√(\d+)/g, '\\sqrt{$1}');
+            }
+        }
+
+        function submitAnswer() {
+            if (!userInput.trim()) return;
+            clearInterval(timerInterval);
+
+            const isCorrect = currentQuestion.acceptableInputs.some(acc => {
+                return cleanInput(userInput) === cleanInput(acc);
+            });
+
+            if (isCorrect) {
+                playBeep(880, 'sine', 0.1);
+                setTimeout(() => playBeep(1200, 'sine', 0.15), 100);
+                streak++;
+                let addedScore = 100 + Math.floor(timeLeft * 10) + (streak * 20);
+                score += addedScore;
+                if (score > bestScore) bestScore = score;
+                updateScoreBoard();
+                nextQuestion();
+            } else {
+                triggerExplosion("計算錯誤！回答正確答案才能解除炸彈！");
+            }
+        }
+
+        function cleanInput(str) {
+            return str.replace(/\s+/g, '').replace(/^\+/, '');
+        }
+
+        function updateScoreBoard() {
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('streak-count').innerText = streak;
+            document.getElementById('best-score-display').innerText = bestScore;
+        }
+
+        function triggerExplosion(reason) {
+            playExplosionSound();
+            const card = document.getElementById('game-card');
+            card.classList.add('animate-shake');
+            setTimeout(() => card.classList.remove('animate-shake'), 600);
+            spawnParticles();
+
+            document.getElementById('game-over-reason').innerText = reason;
+            document.getElementById('correct-answer-display').innerHTML = `\\(${currentQuestion.answerLatex}\\)`;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-streak').innerText = streak;
+
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('correct-answer-display'));
+            }
+            setTimeout(() => {
+                document.getElementById('game-over-modal').classList.remove('hidden');
+            }, 400);
+        }
+
+        function spawnParticles() {
+            const canvas = document.getElementById('explosion-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const particles = [];
+            const colors = ['#00f3ff', '#ff0055', '#ffea00', '#ffffff'];
+
+            for (let i = 0; i < 80; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 18,
+                    vy: (Math.random() - 0.5) * 18,
+                    size: Math.random() * 6 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1,
+                    decay: Math.random() * 0.02 + 0.015
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let stillAlive = false;
+                particles.forEach(p => {
+                    if (p.alpha > 0) {
+                        stillAlive = true;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.alpha -= p.decay;
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, p.alpha);
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                });
+                if (stillAlive) requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('game-over-modal').classList.contains('hidden')) {
+                if (e.key >= '0' && e.key <= '9') inputKey(e.key);
+                else if (e.key === '/') inputKey('/');
+                else if (e.key === '-') inputKey('-');
+                else if (e.key === '.') inputKey('.');
+                else if (e.key === 'r' || e.key === 'R') inputKey('√');
+                else if (e.key === 'Backspace') inputBackspace();
+                else if (e.key === 'Enter') submitAnswer();
+                else if (e.key === 'Escape') inputClear();
+            }
+        });
+
+        window.onload = () => {
+            startGame();
+        };
+    </script>
+</body>
+</html>
